@@ -1,4 +1,5 @@
 import {executeChild} from '@temporalio/workflow';
+import {Sequence} from '../interfaces';
 
 interface Params {
     url: string;
@@ -7,9 +8,7 @@ interface Params {
     height: number;
     dirpath: string;
     timeout: number;
-    framerate: number;
-    startFrame: number;
-    endFrame: number;
+    sequence: Sequence;
     workflowId: string;
 }
 
@@ -18,16 +17,13 @@ interface Output {
 }
 
 export async function snapshotSequence(params: Params): Promise<Output> {
-    const totalFrames = params.endFrame - params.startFrame + 1;
-    const maxDigits = String(totalFrames - 1).length;
-
-    const frames: Array<number> = Array.from(new Array(totalFrames), (_, i) => params.startFrame + i);
+    const totalFrames = params.sequence.end - params.sequence.start + 1;
+    const frames: Array<number> = Array.from(new Array(totalFrames), (_, i) => params.sequence.start + i);
 
     const snapshots: Array<string> = [];
 
     const responses = await Promise.all(
         frames.map((frame: number) => {
-            const paddedFrame = String(frame).padStart(maxDigits, '0');
             return executeChild('snapshotFrame', {
                 args: [
                     {
@@ -35,12 +31,14 @@ export async function snapshotSequence(params: Params): Promise<Output> {
                         seed: params.seed,
                         width: params.width,
                         height: params.height,
-                        filepath: `${params.dirpath}/${params.seed}.${paddedFrame}.png`,
-                        framerate: params.framerate,
-                        frame,
+                        dirpath: params.dirpath,
+                        frame: {
+                            ...params.sequence,
+                            frame,
+                        },
                     },
                 ],
-                workflowId: `${params.workflowId}-${paddedFrame}`,
+                workflowId: `${params.workflowId}-${frame}`,
             });
         }),
     );

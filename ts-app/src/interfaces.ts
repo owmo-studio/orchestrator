@@ -12,3 +12,13 @@ export interface EngineConfig {
     };
     keepCanvasOnDestroy: true;
 }
+
+export interface Sequence {
+    fps: number;
+    start: number;
+    end: number;
+}
+
+export interface Frame extends Sequence {
+    frame: number;
+}

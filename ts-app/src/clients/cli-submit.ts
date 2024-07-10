@@ -12,7 +12,6 @@ dotenv.config();
 
 async function run() {
     const isProduction = process.env.NODE_ENV === 'production';
-    const defaultOutDir = isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', '..', 'out')}`;
 
     const connection = await Connection.connect({
         address: isProduction ? process.env.TEMPORAL_ADDRESS : DEV_TEMPORAL_ADDRESS,
@@ -70,124 +69,115 @@ async function run() {
 
     const params: {[key: string]: any} = {};
 
-    if (goal === 'snapshot') {
-        params['url'] = await input({
-            message: 'URL:',
+    params['url'] = await input({
+        message: 'URL:',
+        required: true,
+        validate: url => isValidURL(url),
+    });
+
+    params['width'] = await number({
+        message: 'Width (px):',
+        required: true,
+        default: 1000,
+        min: 1,
+    });
+
+    params['height'] = await number({
+        message: 'Height (px):',
+        required: true,
+        default: 1000,
+        min: 1,
+    });
+
+    params['seed'] = await input({
+        message: 'Seed:',
+        required: true,
+        default: makeHashStringUsingPRNG(seedrandom(workflowId)),
+    });
+
+    params['timeout'] = await number({
+        message: 'Timeout (min):',
+        required: true,
+        default: 10,
+        min: 1,
+        max: 6 * 60 - 1, // 6 hours less 1 minute: exit before startToCloseTimeout triggers
+    });
+
+    params['dirpath'] = await input({
+        message: 'Output directory (full path):',
+        default: isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', '..', 'out')}`,
+        validate: path => doesDirectoryExist(path),
+    });
+
+    if (type === 'sequence') {
+        params['startFrame'] = await number({
+            message: 'Start frame (0...N)',
             required: true,
-            validate: url => isValidURL(url),
+            default: 0,
+            min: 0,
         });
 
-        params['width'] = await number({
-            message: 'Width (px):',
+        params['endFrame'] = await number({
+            message: 'End frame (Start Frame + 1...N):',
             required: true,
-            default: 1000,
+            default: params['startFrame'] + 1,
+            min: params['startFrame'] + 1,
+        });
+
+        params['framerate'] = await number({
+            message: 'Framerate (FPS):',
+            required: true,
+            default: 30,
             min: 1,
         });
-
-        params['height'] = await number({
-            message: 'Height (px):',
-            required: true,
-            default: 1000,
-            min: 1,
-        });
-
-        params['seed'] = await input({
-            message: 'Seed:',
-            required: true,
-            default: makeHashStringUsingPRNG(seedrandom(workflowId)),
-        });
-
-        params['timeout'] = await number({
-            message: 'Timeout (min):',
-            required: true,
-            default: 10,
-            min: 1,
-            max: 6 * 60 - 1, // 6 hours less 1 minute: exit before startToCloseTimeout triggers
-        });
-
-        if (type === 'frame') {
-            params['filepath'] = await input({
-                required: true,
-                message: 'Ouput file (full path):',
-                default: path.join(defaultOutDir, `${params.seed}.png`),
-                validate: path => doesDirectoryExist(path),
-            });
-        }
-
-        if (type === 'sequence') {
-            params['dirpath'] = await input({
-                message: 'Output directory (full path):',
-                default: defaultOutDir,
-                validate: path => doesDirectoryExist(path),
-            });
-
-            params['startFrame'] = await number({
-                message: 'Start frame (0...N)',
-                required: true,
-                default: 0,
-                min: 0,
-            });
-
-            params['endFrame'] = await number({
-                message: 'End frame (Start Frame + 1...N):',
-                required: true,
-                default: params['startFrame'] + 1,
-                min: params['startFrame'] + 1,
-            });
-
-            params['framerate'] = await number({
-                message: 'Framerate (FPS):',
-                required: true,
-                default: 30,
-                min: 1,
-            });
-        }
-
-        const ok = await confirm({
-            message: 'Confirm (Y) to submit:',
-        });
-
-        if (!ok) return;
-
-        if (workflow === 'snapshotFrame') {
-            await client.workflow.start(snapshotFrame, {
-                args: [
-                    {
-                        url: params.url,
-                        seed: params.seed,
-                        width: params.width,
-                        height: params.height,
-                        timeout: params.timeout * 1000 * 60,
-                        filepath: params.filepath,
-                    },
-                ],
-                taskQueue: TASK_QUEUE,
-                workflowId,
-            });
-        } else if (workflow === 'snapshotSequence') {
-            await client.workflow.start(snapshotSequence, {
-                args: [
-                    {
-                        url: params.url,
-                        seed: params.seed,
-                        width: params.width,
-                        height: params.height,
-                        timeout: params.timeout * 1000 * 60,
-                        dirpath: params.dirpath,
-                        startFrame: params.startFrame,
-                        endFrame: params.endFrame,
-                        framerate: params.framerate,
-                        workflowId,
-                    },
-                ],
-                taskQueue: TASK_QUEUE,
-                workflowId,
-            });
-        }
-
-        console.log(`\n${workflowId} has been submitted!\n`);
-        return;
     }
+
+    const ok = await confirm({
+        message: 'Confirm (Y) to submit:',
+    });
+
+    if (!ok) return;
+
+    if (workflow === 'snapshotFrame') {
+        await client.workflow.start(snapshotFrame, {
+            args: [
+                {
+                    url: params.url,
+                    seed: params.seed,
+                    width: params.width,
+                    height: params.height,
+                    timeout: params.timeout * 1000 * 60,
+                    dirpath: params.dirpath,
+                },
+            ],
+            taskQueue: TASK_QUEUE,
+            workflowId,
+        });
+    } else if (workflow === 'snapshotSequence') {
+        await client.workflow.start(snapshotSequence, {
+            args: [
+                {
+                    url: params.url,
+                    seed: params.seed,
+                    width: params.width,
+                    height: params.height,
+                    timeout: params.timeout * 1000 * 60,
+                    dirpath: params.dirpath,
+                    sequence: {
+                        fps: params.framerate,
+                        start: params.startFrame,
+                        end: params.endFrame,
+                    },
+                    workflowId,
+                },
+            ],
+            taskQueue: TASK_QUEUE,
+            workflowId,
+        });
+    }
+
+    console.log(`\n${workflowId} has been submitted!\n`);
+    return;
 }
 
 run().catch(err => {
