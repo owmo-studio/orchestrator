@@ -1,2 +1,3 @@
 # orchestrator
-Render workflows via Temporal.io for ComboMash Engine for a file-based pipeline
+
+Frame based render workflows designed for @combomash/engine via temporal.io
