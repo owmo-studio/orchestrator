@@ -24,3 +24,5 @@ __pycache__
 env/
 .env
 workflow-bundle.js
+*.png
+out/

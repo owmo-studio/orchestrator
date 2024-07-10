@@ -1,17 +1,18 @@
 import * as dotenv from 'dotenv';
-dotenv.config();
-
 import {Worker, NativeConnection} from '@temporalio/worker';
-import {TASK_QUEUE} from './constants';
+import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE} from './constants';
+import * as activities from './activities';
+
+dotenv.config();
 
 async function run() {
     const connection = await NativeConnection.connect({
-        address: process.env.NODE_ENV === 'production' ? process.env.TEMPORAL_ADDRESS : 'localhost:7233',
+        address: process.env.NODE_ENV === 'production' ? process.env.TEMPORAL_ADDRESS : DEV_TEMPORAL_ADDRESS,
     });
 
     const worker = await Worker.create({
         connection,
-        activities: {},
+        activities,
         taskQueue: TASK_QUEUE,
         workflowsPath: require.resolve('./workflows'),
         maxConcurrentLocalActivityExecutions: 1,

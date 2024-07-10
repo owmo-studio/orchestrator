@@ -5,12 +5,13 @@
     "scripts": {
         "build": "tsc --build",
         "build.watch": "tsc --build --watch",
-        "build.workflow": "ts-node src/scripts/build-workflow-bundle.ts",
         "dev": "ts-node src/worker.ts",
         "dev.watch": "nodemon src/worker.ts",
         "start": "NODE_ENV=production ts-node src/worker.ts",
         "start.watch": "NODE_ENV=production nodemon src/worker.ts",
-        "temporal": "temporal server start-dev --ui-port 8080"
+        "temporal": "temporal server start-dev --ui-port 8080",
+        "client": "ts-node src/client.ts",
+        "clean": "rm -rf ./lib"
     },
     "nodemonConfig": {
         "execMap": {
@@ -22,6 +23,7 @@
         ]
     },
     "dependencies": {
+        "@inquirer/prompts": "^5.1.2",
         "@temporalio/activity": "^1.8.6",
         "@temporalio/client": "^1.8.6",
         "@temporalio/worker": "^1.8.6",

@@ -1,5 +1,6 @@
 import * as activity from '@temporalio/activity';
 import {addOrUpdateQueryParams} from '../helpers';
+import {EngineConfig} from '../interfaces';
 import puppeteer from 'puppeteer';
 
 interface Params {
@@ -13,21 +14,6 @@ interface Params {
     framerate?: number;
 }
 
-interface EngineConfig {
-    seed: string;
-    runConfig: {
-        method: 'frames';
-        framerate: number;
-        frame: number;
-    };
-    fitConfig: {
-        method: 'exact';
-        width: number;
-        height: number;
-    };
-    keepCanvasOnDestroy: true;
-}
-
 interface Output {
     snapshot: string;
 }
@@ -38,9 +24,9 @@ declare global {
     }
 }
 
-export async function snapshotCanvasToFile(params: Params): Promise<Output> {
+export async function screenshotCanvasToFile(params: Params): Promise<Output> {
     const context = activity.Context.current();
-    context.log.info('snapshotCanvasToFile INVOKED');
+    context.log.info('screenshotCanvasToFile INVOKED');
 
     const flags = ['--hide-scrollbars', '--enable-gpu'];
     const viewport = {width: params.width, height: params.height};
@@ -69,11 +55,11 @@ export async function snapshotCanvasToFile(params: Params): Promise<Output> {
     });
 
     page.on('pageerror', error => {
-        throw new Error(`snapshotCanvasToFile :: ${error.message}`);
+        throw new Error(`screenshotCanvasToFile :: ${error.message}`);
     });
 
     page.on('console', message => {
-        context.log.info(`snapshotCanvasToFile :: console :: ${message.text()}`);
+        context.log.info(`screenshotCanvasToFile :: console :: ${message.text()}`);
     });
 
     await page.setCacheEnabled(false);
@@ -99,9 +85,7 @@ export async function snapshotCanvasToFile(params: Params): Promise<Output> {
         keepCanvasOnDestroy: true,
     };
 
-    const serializedConfig = encodeURIComponent(JSON.stringify(engineConfig));
-
-    const URL = addOrUpdateQueryParams(params.url, 'config', serializedConfig);
+    const URL = addOrUpdateQueryParams(params.url, 'config', JSON.stringify(engineConfig));
 
     await page.goto(URL, {timeout: 0, waitUntil: 'load'});
 
@@ -134,7 +118,7 @@ export async function snapshotCanvasToFile(params: Params): Promise<Output> {
 
     await browser.close();
 
-    context.log.info(`snapshotCanvasToFile > snapshot taken :: ${params.filepath}`);
+    context.log.info(`screenshotCanvasToFile > snapshot taken :: ${params.filepath}`);
 
     return {
         snapshot: params.filepath,
