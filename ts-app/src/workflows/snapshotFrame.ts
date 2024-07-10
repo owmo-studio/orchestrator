@@ -1,15 +1,15 @@
 import {proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
+import {Frame} from '../interfaces';
 
 interface Params {
     url: string;
     seed: string;
     width: number;
     height: number;
-    filepath: string;
+    dirpath: string;
     timeout: number;
-    frame?: number;
-    framerate?: number;
+    frame?: Frame;
 }
 
 interface Output {

@@ -1,6 +1,6 @@
 import * as activity from '@temporalio/activity';
 import {addOrUpdateQueryParams} from '../helpers';
-import {EngineConfig} from '../interfaces';
+import {EngineConfig, Frame} from '../interfaces';
 import puppeteer from 'puppeteer';
 
 interface Params {
@@ -8,10 +8,9 @@ interface Params {
     seed: string;
     width: number;
     height: number;
-    filepath: string;
+    dirpath: string;
     timeout: number;
-    frame?: number;
-    framerate?: number;
+    frame?: Frame;
 }
 
 interface Output {
@@ -74,8 +73,8 @@ export async function screenshotCanvasToFile(params: Params): Promise<Output> {
         seed: params.seed,
         runConfig: {
             method: 'frames',
-            frame: params.frame ?? 0,
-            framerate: params.framerate ?? 30,
+            frame: params.frame?.frame ?? 0,
+            framerate: params.frame?.fps ?? 30,
         },
         fitConfig: {
             method: 'exact',
@@ -106,8 +105,18 @@ export async function screenshotCanvasToFile(params: Params): Promise<Output> {
     const canvas = await page.$('canvas');
     if (!canvas) throw new Error('canvas is null');
 
+    let ext: string = 'png';
+
+    if (params.frame) {
+        const maxDigits = String(params.frame.end - params.frame.start).length;
+        const paddedFrame = String(params.frame.frame).padStart(maxDigits, '0');
+        ext = `${paddedFrame}.png`;
+    }
+
+    const filepath = `${params.dirpath}/${params.seed}.${ext}`;
+
     await page.screenshot({
-        path: params.filepath,
+        path: filepath,
         clip: {
             x: 0,
             y: 0,
@@ -118,9 +127,9 @@ export async function screenshotCanvasToFile(params: Params): Promise<Output> {
 
     await browser.close();
 
-    context.log.info(`screenshotCanvasToFile > snapshot taken :: ${params.filepath}`);
+    context.log.info(`screenshotCanvasToFile > snapshot taken :: ${filepath}`);
 
     return {
-        snapshot: params.filepath,
+        snapshot: filepath,
     };
 }
