@@ -22,7 +22,4 @@ lib
 .pytest_cache
 __pycache__
 env/
-.env
 workflow-bundle.js
-/out/*
-!/out/.gitkeep

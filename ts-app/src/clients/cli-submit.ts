@@ -12,7 +12,7 @@ dotenv.config();
 
 async function run() {
     const isProduction = process.env.NODE_ENV === 'production';
-    const defaultOutDir = isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', 'out')}`;
+    const defaultOutDir = isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', '..', 'out')}`;
 
     const connection = await Connection.connect({
         address: isProduction ? process.env.TEMPORAL_ADDRESS : DEV_TEMPORAL_ADDRESS,
