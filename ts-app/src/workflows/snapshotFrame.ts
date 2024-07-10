@@ -8,8 +8,6 @@ interface Params {
     height: number;
     filepath: string;
     timeout: number;
-    frame?: number;
-    framerate?: number;
 }
 
 interface Output {

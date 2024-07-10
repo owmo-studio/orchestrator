@@ -8,19 +8,17 @@
 ## Development
 
 -   `npm run temporal`
--   `npm run dev.watch`
+-   `npm run worker`
+-   `npm run client`
 
 ## Production
 
--   `npm run build`
--   `npm run start.watch`
-
-Required environment variables in `.env` file at root:
+Requires `.env` file with the following:
 
 ```
 TEMPORAL_ADDRESS = "{hostname|address}:7233"
 ```
 
-## Workflows
-
--   `npm run snapshot -- -u {URL} -o {output directory} -n {number}`
+-   `npm run build`
+-   `npm run start`
+-   `npm run submit`
