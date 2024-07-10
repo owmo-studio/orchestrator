@@ -4,7 +4,7 @@ import {v4 as uuidv4} from 'uuid';
 import {input, number, select, confirm} from '@inquirer/prompts';
 import {Connection, Client} from '@temporalio/client';
 import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE} from '../constants';
-import {snapshotFrame, snapshotSequence} from '../workflows';
+import {exploreFrames, snapshotFrame, snapshotSequence} from '../workflows';
 import {doesDirectoryExist, isValidURL, makeHashStringUsingPRNG} from '../helpers';
 import seedrandom from 'seedrandom';
 
@@ -40,9 +40,7 @@ async function run() {
             default: 'explore',
         });
 
-        if (goal === 'explore') {
-            return 'snapshotFrame'; // !!! replace
-        } else if (goal === 'snapshot') {
+        if (goal === 'snapshot') {
             type = await select({
                 message: 'What type of snapshot?',
                 choices: [
@@ -61,9 +59,16 @@ async function run() {
             if (type === 'frame') return 'snapshotFrame';
             else if (type === 'sequence') return 'snapshotSequence';
         }
+
+        if (goal === 'explore') {
+            return 'exploreFrames'; // !!! replace
+        }
+
+        return;
     };
 
     const workflow = await determineWorkflow();
+    if (!workflow) return;
 
     const workflowId = `${workflow}-${uuidv4()}`;
 
@@ -89,22 +94,27 @@ async function run() {
         min: 1,
     });
 
-    params['seed'] = await input({
-        message: 'Seed:',
-        required: true,
-        default: makeHashStringUsingPRNG(seedrandom(workflowId)),
-    });
+    if (goal === 'snapshot') {
+        params['seed'] = await input({
+            message: 'Seed:',
+            required: true,
+            default: makeHashStringUsingPRNG(seedrandom(workflowId)),
+        });
+    }
 
     params['timeout'] = await number({
         message: 'Timeout (min):',
         required: true,
         default: 10,
         min: 1,
-        max: 6 * 60 - 1, // 6 hours less 1 minute: exit before startToCloseTimeout triggers
+        max: 6 * 60 - 1, // 6 hours less 1 minute: force exit before "startToCloseTimeout" occurs
     });
 
+    // convert input minutes to required milliseconds
+    params['timeout'] = params['timeout'] * 1000 * 60;
+
     params['dirpath'] = await input({
-        message: 'Output directory (full path):',
+        message: 'Root output directory (full path):',
         default: isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', '..', 'out')}`,
         validate: path => doesDirectoryExist(path),
     });
@@ -118,10 +128,10 @@ async function run() {
         });
 
         params['endFrame'] = await number({
-            message: 'End frame (Start Frame + 1...N):',
+            message: 'End frame (Start Frame + 0...N):',
             required: true,
             default: params['startFrame'] + 1,
-            min: params['startFrame'] + 1,
+            min: params['startFrame'],
         });
 
         params['framerate'] = await number({
@@ -132,48 +142,77 @@ async function run() {
         });
     }
 
+    if (goal === 'explore') {
+        params['count'] = await number({
+            message: 'How many to generate? (1...N):',
+            required: true,
+            default: 1,
+            min: 1,
+        });
+    }
+
     const ok = await confirm({
         message: 'Confirm (Y) to submit:',
     });
 
     if (!ok) return;
 
-    if (workflow === 'snapshotFrame') {
-        await client.workflow.start(snapshotFrame, {
-            args: [
-                {
-                    url: params.url,
-                    seed: params.seed,
-                    width: params.width,
-                    height: params.height,
-                    timeout: params.timeout * 1000 * 60,
-                    dirpath: params.dirpath,
-                },
-            ],
-            taskQueue: TASK_QUEUE,
-            workflowId,
-        });
-    } else if (workflow === 'snapshotSequence') {
-        await client.workflow.start(snapshotSequence, {
-            args: [
-                {
-                    url: params.url,
-                    seed: params.seed,
-                    width: params.width,
-                    height: params.height,
-                    timeout: params.timeout * 1000 * 60,
-                    dirpath: params.dirpath,
-                    sequence: {
-                        fps: params.framerate,
-                        start: params.startFrame,
-                        end: params.endFrame,
+    switch (workflow) {
+        case 'snapshotFrame':
+            await client.workflow.start(snapshotFrame, {
+                args: [
+                    {
+                        url: params.url,
+                        seed: params.seed,
+                        width: params.width,
+                        height: params.height,
+                        timeout: params.timeout,
+                        dirpath: params.dirpath,
                     },
-                    workflowId,
-                },
-            ],
-            taskQueue: TASK_QUEUE,
-            workflowId,
-        });
+                ],
+                taskQueue: TASK_QUEUE,
+                workflowId,
+            });
+            break;
+        case 'snapshotSequence':
+            await client.workflow.start(snapshotSequence, {
+                args: [
+                    {
+                        url: params.url,
+                        seed: params.seed,
+                        width: params.width,
+                        height: params.height,
+                        timeout: params.timeout,
+                        dirpath: params.dirpath,
+                        sequence: {
+                            fps: params.framerate,
+                            start: params.startFrame,
+                            end: params.endFrame,
+                        },
+                        workflowId,
+                    },
+                ],
+                taskQueue: TASK_QUEUE,
+                workflowId,
+            });
+            break;
+        case 'exploreFrames':
+            await client.workflow.start(exploreFrames, {
+                args: [
+                    {
+                        url: params.url,
+                        width: params.width,
+                        height: params.height,
+                        dirpath: params.dirpath,
+                        timeout: params.timeout,
+                        count: params.count,
+                        workflowId,
+                    },
+                ],
+                taskQueue: TASK_QUEUE,
+                workflowId,
+            });
+            break;
     }
 
     console.log(`\n${workflowId} has been submitted!\n`);
