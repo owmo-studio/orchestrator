@@ -12,8 +12,11 @@ import seedrandom from 'seedrandom';
 dotenv.config();
 
 async function run() {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const defaultOutDir = isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), 'out')}`;
+
     const connection = await Connection.connect({
-        address: process.env.NODE_ENV === 'production' ? process.env.TEMPORAL_ADDRESS : DEV_TEMPORAL_ADDRESS,
+        address: isProduction ? process.env.TEMPORAL_ADDRESS : DEV_TEMPORAL_ADDRESS,
     });
 
     const client = new Client({connection});
@@ -66,8 +69,6 @@ async function run() {
                 required: false,
                 min: 1000,
             })) ?? 1000;
-
-        const defaultOutDir = `${path.join(path.dirname(__filename), '..', 'out')}`;
 
         const filepath: string = await input({
             message: 'Full output file path',
