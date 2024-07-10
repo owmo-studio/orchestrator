@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import seedrandom from 'seedrandom';
 
 export function isValidURL(url: string): boolean {
@@ -18,4 +20,10 @@ export function makeHashStringUsingPRNG(prng: seedrandom.PRNG): string {
     let hash: string = '0x';
     for (let i = 64; i > 0; --i) hash += chars[Math.floor(prng() * chars.length)];
     return hash;
+}
+
+export function doesDirectoryExist(inputPath: string): boolean {
+    const fullPath = path.resolve(inputPath);
+    const dirPath = path.dirname(fullPath);
+    return fs.existsSync(dirPath) && fs.lstatSync(dirPath).isDirectory();
 }
