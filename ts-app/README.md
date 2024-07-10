@@ -8,19 +8,19 @@
 ## Development
 
 -   `npm run temporal`
--   `npm run dev.watch`
+-   `npm run worker`
+-   `npm run client`
+
+When running the CLI in development mode, it defaults to the `out` directory. The contents in this directory are excluded in the `.gitignore` file and running `npm run clean` will both clear the `lib` directory as well as the contents of this folder.
 
 ## Production
 
--   `npm run build`
--   `npm run start.watch`
-
-Required environment variables in `.env` file at root:
+Requires `.env` file with the following:
 
 ```
 TEMPORAL_ADDRESS = "{hostname|address}:7233"
 ```
 
-## Workflows
-
--   `npm run snapshot -- -u {URL} -o {output directory} -n {number}`
+-   `npm run build`
+-   `npm run start`
+-   `npm run submit`

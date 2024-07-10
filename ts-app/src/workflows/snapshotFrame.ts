@@ -1,5 +1,5 @@
 import {proxyActivities} from '@temporalio/workflow';
-import * as activities from '../activities/screenshotCanvasToFile';
+import * as activities from '../activities';
 
 interface Params {
     url: string;
@@ -17,7 +17,7 @@ interface Output {
 }
 
 const {screenshotCanvasToFile} = proxyActivities<typeof activities>({
-    startToCloseTimeout: '12 hours',
+    startToCloseTimeout: '6 hours',
 });
 
 export async function snapshotFrame(params: Params): Promise<Output> {

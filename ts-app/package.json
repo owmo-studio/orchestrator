@@ -3,15 +3,16 @@
     "version": "0.0.0",
     "private": true,
     "scripts": {
+        "client": "ts-node src/clients/cli-submit.ts",
+        "worker": "nodemon src/worker.ts",
+        "worker.detached": "ts-node src/worker.ts",
+        "temporal": "temporal server start-dev --ui-port 8080",
         "build": "tsc --build",
         "build.watch": "tsc --build --watch",
-        "dev": "ts-node src/worker.ts",
-        "dev.watch": "nodemon src/worker.ts",
-        "start": "NODE_ENV=production ts-node src/worker.ts",
-        "start.watch": "NODE_ENV=production nodemon src/worker.ts",
-        "temporal": "temporal server start-dev --ui-port 8080",
-        "client": "ts-node src/client.ts",
-        "clean": "rm -rf ./lib"
+        "start": "NODE_ENV=production nodemon src/worker.ts",
+        "start.detached": "NODE_ENV=production ts-node src/worker.ts",
+        "submit": "NODE_ENV=production ts-node src/clients/cli-submit.ts",
+        "clean": "rm -rf ./lib & rm -rf ./out/*"
     },
     "nodemonConfig": {
         "execMap": {
