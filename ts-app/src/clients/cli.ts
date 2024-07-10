@@ -5,7 +5,7 @@ import {input, number, select, confirm} from '@inquirer/prompts';
 import {Connection, Client} from '@temporalio/client';
 import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE} from '../constants';
 import {exploreFrames, snapshotFrame, snapshotSequence} from '../workflows';
-import {doesDirectoryExist, isValidURL, makeHashStringUsingPRNG} from '../helpers';
+import {doesDirectoryExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../helpers';
 import seedrandom from 'seedrandom';
 
 dotenv.config();
@@ -32,27 +32,27 @@ async function run() {
                     description: 'Generate random outputs',
                 },
                 {
-                    name: 'snapshot',
-                    value: 'snapshot',
+                    name: 'capture',
+                    value: 'capture',
                     description: 'Capture a specific output',
                 },
             ],
             default: 'explore',
         });
 
-        if (goal === 'snapshot') {
+        if (goal === 'capture') {
             type = await select({
-                message: 'What type of snapshot?',
+                message: 'What type of capture?',
                 choices: [
                     {
                         name: 'frame',
                         value: 'frame',
-                        description: 'Snapshot a single frame',
+                        description: 'Capture a single frame',
                     },
                     {
                         name: 'sequence',
                         value: 'sequence',
-                        description: 'Snapshot a sequence of frames',
+                        description: 'Capture a sequence of frames',
                     },
                 ],
             });
@@ -61,7 +61,7 @@ async function run() {
         }
 
         if (goal === 'explore') {
-            return 'exploreFrames'; // !!! replace
+            return 'exploreFrames';
         }
 
         return;
@@ -94,7 +94,7 @@ async function run() {
         min: 1,
     });
 
-    if (goal === 'snapshot') {
+    if (goal === 'capture') {
         params['seed'] = await input({
             message: 'Seed:',
             required: true,
@@ -105,7 +105,7 @@ async function run() {
     params['timeout'] = await number({
         message: 'Timeout (min):',
         required: true,
-        default: 10,
+        default: 1,
         min: 1,
         max: 6 * 60 - 1, // 6 hours less 1 minute: force exit before "startToCloseTimeout" occurs
     });
@@ -118,6 +118,39 @@ async function run() {
         default: isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', '..', 'out')}`,
         validate: path => doesDirectoryExist(path),
     });
+
+    if (goal === 'explore') {
+        const useDateVersionFolder = await confirm({
+            message: 'Put outputs into a dated sub-directory?',
+            default: true,
+        });
+
+        if (useDateVersionFolder) {
+            let subDirectory = getDirectoryDateString();
+
+            const label = await input({
+                message: 'Label for sub-directory (optional):',
+                default: '',
+                required: false,
+                validate: label => label === '' || /^[a-zA-Z0-9-]+$/.test(label),
+            });
+
+            if (label !== '') {
+                subDirectory += `__${label}`;
+            }
+
+            subDirectory += `__${workflowId}`;
+
+            params['subDirectory'] = subDirectory;
+        }
+
+        params['count'] = await number({
+            message: 'How many do you want? (1...N):',
+            required: true,
+            default: 1,
+            min: 1,
+        });
+    }
 
     if (type === 'sequence') {
         params['startFrame'] = await number({
@@ -138,15 +171,6 @@ async function run() {
             message: 'Framerate (FPS):',
             required: true,
             default: 30,
-            min: 1,
-        });
-    }
-
-    if (goal === 'explore') {
-        params['count'] = await number({
-            message: 'How many to generate? (1...N):',
-            required: true,
-            default: 1,
             min: 1,
         });
     }
@@ -206,6 +230,7 @@ async function run() {
                         dirpath: params.dirpath,
                         timeout: params.timeout,
                         count: params.count,
+                        subDirectory: params.subDirectory,
                         workflowId,
                     },
                 ],
@@ -215,7 +240,7 @@ async function run() {
             break;
     }
 
-    console.log(`\n${workflowId} has been submitted!\n`);
+    console.log(`\nWorkflow Submitted > ${workflowId}\n`);
     return;
 }
 

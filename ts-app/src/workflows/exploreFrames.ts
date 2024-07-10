@@ -9,6 +9,7 @@ interface Params {
     dirpath: string;
     timeout: number;
     count: number;
+    subDirectory: string | undefined;
     workflowId: string;
 }
 
@@ -16,11 +17,21 @@ interface Output {
     snapshots: Array<string>;
 }
 
-const {makeArrayOfHashes} = proxyActivities<typeof activities>({
+const {createFsDirectory, makeArrayOfHashes} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
 });
 
 export async function exploreFrames(params: Params): Promise<Output> {
+    let outputDirectory = params.dirpath;
+
+    if (params.subDirectory) {
+        const {dirpath} = await createFsDirectory({
+            rootdir: params.dirpath,
+            dir: params.subDirectory,
+        });
+        outputDirectory = dirpath;
+    }
+
     const {hashes} = await makeArrayOfHashes({
         uuid: params.workflowId,
         count: params.count,
@@ -37,7 +48,7 @@ export async function exploreFrames(params: Params): Promise<Output> {
                         seed: hash,
                         width: params.width,
                         height: params.height,
-                        dirpath: params.dirpath,
+                        dirpath: outputDirectory,
                         timeout: params.timeout,
                     },
                 ],

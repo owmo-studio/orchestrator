@@ -27,3 +27,11 @@ export function doesDirectoryExist(inputPath: string): boolean {
     const dirPath = path.dirname(fullPath);
     return fs.existsSync(dirPath) && fs.lstatSync(dirPath).isDirectory();
 }
+
+export function getDirectoryDateString(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const day = today.getDate().toString().padStart(2, '0');
+    return `${year}_${month}_${day}`;
+}
