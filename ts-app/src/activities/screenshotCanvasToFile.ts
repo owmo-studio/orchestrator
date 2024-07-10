@@ -55,7 +55,7 @@ export async function screenshotCanvasToFile(params: Params): Promise<Output> {
     });
 
     page.on('pageerror', error => {
-        throw new Error(`screenshotCanvasToFile :: ${error.message}`);
+        context.log.error(`screenshotCanvasToFile :: ${error.message}`);
     });
 
     page.on('console', message => {
