@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import * as activity from '@temporalio/activity';
-import {addOrUpdateQueryParams} from '../helpers';
+import {addOrUpdateQueryParams, createZipArchive} from '../helpers';
 import {EngineConfig, Frame} from '../interfaces';
 import {BrowserSingleton} from '../singletons/browser';
 
@@ -16,7 +16,8 @@ interface Params {
 }
 
 interface Output {
-    snapshot: string;
+    screenshot: string;
+    downloads: string;
 }
 
 declare global {
@@ -25,9 +26,9 @@ declare global {
     }
 }
 
-export async function screenshotCanvasToFile(params: Params): Promise<Output> {
+export async function screenshotCanvasArchiveDownloads(params: Params): Promise<Output> {
     const context = activity.Context.current();
-    context.log.info('screenshotCanvasToFile INVOKED');
+    context.log.info('screenshotCanvasArchiveDownloads INVOKED');
 
     const engineConfig: EngineConfig = {
         seed: params.seed,
@@ -52,7 +53,7 @@ export async function screenshotCanvasToFile(params: Params): Promise<Output> {
             const paddedFrame = String(params.frame.frame).padStart(maxDigits, '0');
             return `${paddedFrame}.png`;
         }
-        return '.png';
+        return 'png';
     };
 
     const filepath = `${params.dirpath}/${params.seed}.${extension()}`;
@@ -69,6 +70,7 @@ export async function screenshotCanvasToFile(params: Params): Promise<Output> {
 
     const guids: {[key: string]: string} = {};
     const downloadsInProgress: Array<Promise<string>> = [];
+    const archivePath = `${params.dirpath}/${params.seed}.zip`;
 
     client.on('Browser.downloadWillBegin', async event => {
         const {suggestedFilename, guid} = event;
@@ -106,11 +108,11 @@ export async function screenshotCanvasToFile(params: Params): Promise<Output> {
         });
 
         page.on('pageerror', error => {
-            context.log.error(`screenshotCanvasToFile :: ${error.message}`);
+            context.log.error(`screenshotCanvasArchiveDownloads :: ERROR :: ${error.message}`);
         });
 
         page.on('console', message => {
-            context.log.info(`screenshotCanvasToFile :: console :: ${message.text()}`);
+            context.log.info(`screenshotCanvasArchiveDownloads :: LOG :: ${message.text()}`);
         });
 
         await page.setCacheEnabled(false);
@@ -152,17 +154,24 @@ export async function screenshotCanvasToFile(params: Params): Promise<Output> {
 
         await Promise.all(downloadsInProgress);
 
+        if (downloadsInProgress.length > 0) {
+            const filePaths: Array<string> = [];
+            for (const key of Object.keys(guids)) filePaths.push(path.resolve(params.dirpath, guids[key]));
+            await createZipArchive(filePaths, archivePath);
+        }
+
         await page.close();
     } catch (e) {
-        console.log(e);
+        console.error(e);
     } finally {
         await client.detach();
         await browser.disconnect();
     }
 
-    context.log.info(`screenshotCanvasToFile > snapshot taken :: ${filepath}`);
+    context.log.info(`screenshotCanvasArchiveDownloads > snapshot taken :: ${filepath}`);
 
     return {
-        snapshot: filepath,
+        screenshot: filepath,
+        downloads: Object.keys(guids).length > 0 ? archivePath : '',
     };
 }

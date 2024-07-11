@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import JSZip from 'jszip';
 import seedrandom from 'seedrandom';
 
 export function isValidURL(url: string): boolean {
@@ -34,4 +35,19 @@ export function getDirectoryDateString(): string {
     const month = (today.getMonth() + 1).toString().padStart(2, '0');
     const day = today.getDate().toString().padStart(2, '0');
     return `${year}_${month}_${day}`;
+}
+
+export async function createZipArchive(filePaths: Array<string>, zipFilePath: string) {
+    const zip = new JSZip();
+
+    for (const filePath of filePaths) {
+        const fileContent = fs.readFileSync(filePath);
+        const fileName: string = filePath.split('/').pop() ?? 'error';
+        zip.file(fileName, fileContent);
+        fs.unlinkSync(filePath);
+    }
+
+    const content = await zip.generateAsync({type: 'nodebuffer'});
+
+    fs.writeFileSync(zipFilePath, content);
 }
