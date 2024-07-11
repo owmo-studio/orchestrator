@@ -1,4 +1,5 @@
 import * as dotenv from 'dotenv';
+import {BrowserSingleton} from './singletons/browser';
 import {Worker, NativeConnection} from '@temporalio/worker';
 import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE} from './constants';
 import * as activities from './activities';
@@ -15,10 +16,14 @@ async function run() {
         activities,
         taskQueue: TASK_QUEUE,
         workflowsPath: require.resolve('./workflows'),
-        maxConcurrentLocalActivityExecutions: 1,
+        maxConcurrentWorkflowTaskExecutions: 10,
         maxConcurrentActivityTaskExecutions: 1,
-        maxConcurrentWorkflowTaskExecutions: 1,
     });
+
+    worker.shutdown = async function shutdown() {
+        await BrowserSingleton.cleanup();
+        return Worker.prototype.shutdown.call(this);
+    };
 
     await worker.run();
 }
