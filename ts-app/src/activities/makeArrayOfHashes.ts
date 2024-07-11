@@ -21,7 +21,7 @@ export async function makeArrayOfHashes(params: Params): Promise<Output> {
         output.hashes.push(makeHashStringUsingPRNG(prng));
     }
 
-    context.log.info(`makeArrayOfHashes > hashes array: ${output.hashes}`);
+    context.log.info(`makeArrayOfHashes COMPLETED`);
 
     return output;
 }

@@ -17,7 +17,7 @@ interface Params {
 
 interface Output {
     screenshot: string;
-    downloads: string;
+    archive: string;
 }
 
 declare global {
@@ -47,16 +47,16 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
 
     const URL = addOrUpdateQueryParams(params.url, 'config', JSON.stringify(engineConfig));
 
-    const extension = () => {
+    const extension = (ext: string) => {
         if (params.frame) {
             const maxDigits = String(params.frame.end - params.frame.start).length;
             const paddedFrame = String(params.frame.frame).padStart(maxDigits, '0');
-            return `${paddedFrame}.png`;
+            return `${paddedFrame}.${ext}`;
         }
-        return 'png';
+        return ext;
     };
 
-    const filepath = `${params.dirpath}/${params.seed}.${extension()}`;
+    const filepath = `${params.dirpath}/${params.seed}.${extension('png')}`;
 
     const browser = await BrowserSingleton.getConnectedBrowser();
 
@@ -70,7 +70,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
 
     const guids: {[key: string]: string} = {};
     const downloadsInProgress: Array<Promise<string>> = [];
-    const archivePath = `${params.dirpath}/${params.seed}.zip`;
+    const archivePath = `${params.dirpath}/${params.seed}.${extension('zip')}`;
 
     client.on('Browser.downloadWillBegin', async event => {
         const {suggestedFilename, guid} = event;
@@ -108,11 +108,11 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
         });
 
         page.on('pageerror', error => {
-            context.log.error(`screenshotCanvasArchiveDownloads :: ERROR :: ${error.message}`);
+            context.log.error(`screenshotCanvasArchiveDownloads ERROR - ${error.message}`);
         });
 
         page.on('console', message => {
-            context.log.info(`screenshotCanvasArchiveDownloads :: LOG :: ${message.text()}`);
+            context.log.info(`screenshotCanvasArchiveDownloads LOG - ${message.text()}`);
         });
 
         await page.setCacheEnabled(false);
@@ -168,10 +168,10 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
         await browser.disconnect();
     }
 
-    context.log.info(`screenshotCanvasArchiveDownloads > snapshot taken :: ${filepath}`);
+    context.log.info(`screenshotCanvasArchiveDownloads COMPLETED`);
 
     return {
         screenshot: filepath,
-        downloads: Object.keys(guids).length > 0 ? archivePath : '',
+        archive: Object.keys(guids).length > 0 ? archivePath : '',
     };
 }

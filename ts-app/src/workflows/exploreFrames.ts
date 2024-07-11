@@ -7,14 +7,17 @@ interface Params {
     width: number;
     height: number;
     dirpath: string;
+    subdirname: string | undefined;
     timeout: number;
     count: number;
-    subDirectory: string | undefined;
     workflowId: string;
 }
 
 interface Output {
-    snapshots: Array<string>;
+    frames: Array<{
+        image: string;
+        outputs: string;
+    }>;
 }
 
 const {createFsDirectory, makeArrayOfHashes} = proxyActivities<typeof activities>({
@@ -24,10 +27,10 @@ const {createFsDirectory, makeArrayOfHashes} = proxyActivities<typeof activities
 export async function exploreFrames(params: Params): Promise<Output> {
     let outputDirectory = params.dirpath;
 
-    if (params.subDirectory) {
+    if (params.subdirname) {
         const {dirpath} = await createFsDirectory({
             rootdir: params.dirpath,
-            dir: params.subDirectory,
+            dir: params.subdirname,
         });
         outputDirectory = dirpath;
     }
@@ -37,11 +40,14 @@ export async function exploreFrames(params: Params): Promise<Output> {
         count: params.count,
     });
 
-    const snapshots: Array<string> = [];
+    const frames: Array<{
+        image: string;
+        outputs: string;
+    }> = [];
 
     const responses = await Promise.all(
         hashes.map((hash, i) => {
-            return executeChild('snapshotFrame', {
+            return executeChild('renderFrame', {
                 args: [
                     {
                         url: params.url,
@@ -58,8 +64,11 @@ export async function exploreFrames(params: Params): Promise<Output> {
     );
 
     for (const response of responses) {
-        snapshots.push(response.snapshot);
+        frames.push({
+            image: response.image,
+            outputs: response.outputs,
+        });
     }
 
-    return {snapshots};
+    return {frames};
 }

@@ -13,24 +13,24 @@ interface Params {
 }
 
 interface Output {
-    captures: Array<{
-        screenshot: string;
-        downloads: string;
+    frames: Array<{
+        image: string;
+        outputs: string;
     }>;
 }
 
-export async function snapshotSequence(params: Params): Promise<Output> {
+export async function renderSequence(params: Params): Promise<Output> {
     const totalFrames = params.sequence.end - params.sequence.start + 1;
-    const frames: Array<number> = Array.from(new Array(totalFrames), (_, i) => params.sequence.start + i);
+    const framesToRender: Array<number> = Array.from(new Array(totalFrames), (_, i) => params.sequence.start + i);
 
-    const captures: Array<{
-        screenshot: string;
-        downloads: string;
+    const frames: Array<{
+        image: string;
+        outputs: string;
     }> = [];
 
     const responses = await Promise.all(
-        frames.map(frame => {
-            return executeChild('snapshotFrame', {
+        framesToRender.map(frame => {
+            return executeChild('renderFrame', {
                 args: [
                     {
                         url: params.url,
@@ -51,8 +51,8 @@ export async function snapshotSequence(params: Params): Promise<Output> {
     );
 
     for (const response of responses) {
-        captures.push({screenshot: response.screenshot, downloads: response.downlaods});
+        frames.push({image: response.image, outputs: response.outputs});
     }
 
-    return {captures};
+    return {frames};
 }

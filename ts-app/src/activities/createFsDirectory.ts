@@ -15,16 +15,16 @@ export async function createFsDirectory(params: Params): Promise<Output> {
     context.log.info('createFsDirectory INVOKED');
 
     if (!fs.existsSync(params.rootdir)) {
-        throw new Error(`createFsDirectory :: root directory "${params.rootdir}" does not exist`);
+        throw new Error(`createFsDirectory ERROR - root directory does not exist: "${params.rootdir}"`);
     }
 
     const dirpath = `${params.rootdir}/${params.dir}`;
 
     if (!fs.existsSync(dirpath)) {
         fs.mkdirSync(dirpath);
-        context.log.info(`createFsDirectory > "${dirpath}" has been created`);
+        context.log.info(`createFsDirectory COMPLETED`);
     } else {
-        context.log.warn(`createFsDirectory > "${dirpath}" already exists, skipping...`);
+        context.log.warn(`createFsDirectory WARN - directory already exists, skipping...`);
     }
 
     return {

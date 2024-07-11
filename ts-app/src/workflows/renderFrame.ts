@@ -13,14 +13,18 @@ interface Params {
 }
 
 interface Output {
-    screenshot: string;
-    downloads: string;
+    image: string;
+    outputs: string;
 }
 
 const {screenshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
     startToCloseTimeout: '6 hours',
 });
 
-export async function snapshotFrame(params: Params): Promise<Output> {
-    return await screenshotCanvasArchiveDownloads(params);
+export async function renderFrame(params: Params): Promise<Output> {
+    const response = await screenshotCanvasArchiveDownloads(params);
+    return {
+        image: response.screenshot,
+        outputs: response.archive,
+    };
 }
