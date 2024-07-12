@@ -29,8 +29,8 @@ export async function exploreFrames(params: Params): Promise<Output> {
 
     if (params.subdirname) {
         const {dirpath} = await createFsDirectory({
-            rootdir: params.dirpath,
-            dir: params.subdirname,
+            rootPath: params.dirpath,
+            dirName: params.subdirname,
         });
         outputDirectory = dirpath;
     }

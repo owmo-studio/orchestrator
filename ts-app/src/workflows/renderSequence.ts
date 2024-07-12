@@ -1,4 +1,6 @@
+import {proxyActivities} from '@temporalio/workflow';
 import {executeChild} from '@temporalio/workflow';
+import * as activities from '../activities';
 import {Sequence} from '../interfaces';
 
 interface Params {
@@ -9,6 +11,7 @@ interface Params {
     dirpath: string;
     timeout: number;
     sequence: Sequence;
+    makeSubDir: boolean;
     workflowId: string;
 }
 
@@ -19,6 +22,10 @@ interface Output {
     }>;
 }
 
+const {createFsDirectory} = proxyActivities<typeof activities>({
+    startToCloseTimeout: '1 minute',
+});
+
 export async function renderSequence(params: Params): Promise<Output> {
     const totalFrames = params.sequence.end - params.sequence.start + 1;
     const framesToRender: Array<number> = Array.from(new Array(totalFrames), (_, i) => params.sequence.start + i);
@@ -27,6 +34,15 @@ export async function renderSequence(params: Params): Promise<Output> {
         image: string;
         outputs: string;
     }> = [];
+
+    let outputDirectory = params.dirpath;
+    if (params.makeSubDir) {
+        const {dirpath} = await createFsDirectory({
+            rootPath: params.dirpath,
+            dirName: `${params.seed}`,
+        });
+        outputDirectory = dirpath;
+    }
 
     const responses = await Promise.all(
         framesToRender.map(frame => {
@@ -37,7 +53,7 @@ export async function renderSequence(params: Params): Promise<Output> {
                         seed: params.seed,
                         width: params.width,
                         height: params.height,
-                        dirpath: params.dirpath,
+                        dirpath: outputDirectory,
                         timeout: params.timeout,
                         frame: {
                             ...params.sequence,

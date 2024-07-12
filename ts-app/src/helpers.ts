@@ -51,3 +51,11 @@ export async function createZipArchive(filePaths: Array<string>, zipFilePath: st
 
     fs.writeFileSync(zipFilePath, content);
 }
+
+export function delay(time: number) {
+    return new Promise(resolve => setTimeout(resolve, time));
+}
+
+export function throwIfUndefined<T>(x: T | undefined): asserts x is T {
+    if (typeof x === 'undefined') throw new Error(`${x} is undefined!!`);
+}

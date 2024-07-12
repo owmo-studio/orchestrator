@@ -2,8 +2,8 @@ import * as activity from '@temporalio/activity';
 import fs from 'fs';
 
 interface Params {
-    rootdir: string;
-    dir: string;
+    rootPath: string;
+    dirName: string;
 }
 
 interface Output {
@@ -14,11 +14,11 @@ export async function createFsDirectory(params: Params): Promise<Output> {
     const context = activity.Context.current();
     context.log.info('createFsDirectory INVOKED');
 
-    if (!fs.existsSync(params.rootdir)) {
-        throw new Error(`createFsDirectory ERROR - root directory does not exist: "${params.rootdir}"`);
+    if (!fs.existsSync(params.rootPath)) {
+        throw new Error(`createFsDirectory ERROR - root directory does not exist: "${params.rootPath}"`);
     }
 
-    const dirpath = `${params.rootdir}/${params.dir}`;
+    const dirpath = `${params.rootPath}/${params.dirName}`;
 
     if (!fs.existsSync(dirpath)) {
         fs.mkdirSync(dirpath);

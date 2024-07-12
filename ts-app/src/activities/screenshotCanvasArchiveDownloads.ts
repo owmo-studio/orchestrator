@@ -90,6 +90,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
                 });
             }),
         );
+        1;
     });
 
     try {
@@ -162,7 +163,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
 
         await page.close();
     } catch (e) {
-        console.error(e);
+        console.log(e);
     } finally {
         await client.detach();
         await browser.disconnect();

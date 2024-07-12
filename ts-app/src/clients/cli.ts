@@ -113,10 +113,18 @@ async function run() {
     params['timeout'] = params['timeout'] * 1000 * 60;
 
     params['dirpath'] = await input({
-        message: 'Root output directory (full path):',
+        message: 'Output directory path:',
         default: isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', '..', 'out')}`,
         validate: path => doesDirectoryExist(path),
     });
+
+    if (goal === 'render') {
+        const makeSubDirectory = await confirm({
+            message: 'Collate into "seed" sub-directory?',
+            default: true,
+        });
+        params['makeSubDir'] = makeSubDirectory;
+    }
 
     if (goal === 'explore') {
         const useSubDirectory = await confirm({
@@ -191,6 +199,7 @@ async function run() {
                         height: params.height,
                         timeout: params.timeout,
                         dirpath: params.dirpath,
+                        makeSubDir: params.makeSubDir,
                     },
                 ],
                 taskQueue: TASK_QUEUE,
@@ -212,6 +221,7 @@ async function run() {
                             start: params.startFrame,
                             end: params.endFrame,
                         },
+                        makeSubDir: params.makeSubDir,
                         workflowId,
                     },
                 ],

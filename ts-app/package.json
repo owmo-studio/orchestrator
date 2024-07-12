@@ -4,8 +4,7 @@
     "private": true,
     "scripts": {
         "client": "ts-node src/clients/cli.ts",
-        "worker": "nodemon src/worker.ts",
-        "worker.detached": "ts-node src/worker.ts",
+        "worker": "ts-node src/worker.ts",
         "temporal": "temporal server start-dev --ui-port 8080",
         "build": "tsc --build",
         "build.watch": "tsc --build --watch",
