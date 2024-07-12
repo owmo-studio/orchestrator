@@ -1,6 +1,7 @@
 import * as activity from '@temporalio/activity';
 import seedrandom from 'seedrandom';
 import {makeHashStringUsingPRNG} from '../helpers';
+import {logActivity} from '../logging';
 
 interface Params {
     uuid: string;
@@ -13,7 +14,14 @@ interface Output {
 
 export async function makeArrayOfHashes(params: Params): Promise<Output> {
     const context = activity.Context.current();
-    context.log.info('makeArrayOfHashes INVOKED');
+
+    logActivity({
+        context,
+        type: 'info',
+        label: 'makeArrayOfHashes',
+        status: 'INVOKED',
+        data: params,
+    });
 
     const prng = seedrandom(params.uuid);
     const output: Output = {hashes: []};
@@ -21,7 +29,13 @@ export async function makeArrayOfHashes(params: Params): Promise<Output> {
         output.hashes.push(makeHashStringUsingPRNG(prng));
     }
 
-    context.log.info(`makeArrayOfHashes COMPLETED`);
+    logActivity({
+        context,
+        type: 'info',
+        label: 'makeArrayOfHashes',
+        status: 'COMPLETED',
+        data: output,
+    });
 
     return output;
 }

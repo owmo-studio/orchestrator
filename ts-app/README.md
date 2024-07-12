@@ -3,15 +3,15 @@
 ## Install
 
 -   `brew install temporal`
--   `npm install`
 
 ## Development
 
+-   `npm install`
 -   `npm run temporal`
 -   `npm run worker`
--   `npm run client`
+-   `npm run submit`
 
-When running the CLI in development mode, it defaults to the `out` directory. The contents in this directory are excluded in the `.gitignore` file and running `npm run clean` will both clear the `lib` directory as well as the contents of this folder.
+When running the CLI in development mode, it defaults to an `out` directory. The contents in this directory are excluded in the `.gitignore` file and running `npm run clean` will delete the contents of the folder, in addition to clearing any builds in the `lib` directory.
 
 ## Production
 
@@ -22,5 +22,5 @@ TEMPORAL_ADDRESS = "{hostname|address}:7233"
 ```
 
 -   `npm run build`
--   `npm run start`
--   `npm run submit`
+-   `npm run worker.prod`
+-   `npm run submit.prod`

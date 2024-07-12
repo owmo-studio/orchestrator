@@ -11,6 +11,7 @@ interface Params {
     timeout: number;
     count: number;
     workflowId: string;
+    uuid: string;
 }
 
 interface Output {
@@ -36,7 +37,7 @@ export async function exploreFrames(params: Params): Promise<Output> {
     }
 
     const {hashes} = await makeArrayOfHashes({
-        uuid: params.workflowId,
+        uuid: params.uuid,
         count: params.count,
     });
 

@@ -1,16 +1,14 @@
 {
     "name": "@combomash/orchestrator",
-    "version": "0.0.0",
+    "version": "0.1.0",
     "private": true,
     "scripts": {
-        "client": "ts-node src/clients/cli.ts",
         "worker": "ts-node src/worker.ts",
+        "submit": "ts-node src/clients/submit.ts",
         "temporal": "temporal server start-dev --ui-port 8080",
         "build": "tsc --build",
-        "build.watch": "tsc --build --watch",
-        "start": "NODE_ENV=production nodemon src/worker.ts",
-        "start.detached": "NODE_ENV=production ts-node src/worker.ts",
-        "submit": "NODE_ENV=production ts-node src/clients/cli.ts",
+        "worker.prod": "NODE_ENV=production nodemon src/worker.ts",
+        "submit.prod": "NODE_ENV=production ts-node src/clients/submit.ts",
         "clean": "rm -rf ./lib & rm -rf ../out/*"
     },
     "nodemonConfig": {

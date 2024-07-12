@@ -3,7 +3,8 @@ import path from 'path';
 import * as activity from '@temporalio/activity';
 import {addOrUpdateQueryParams, createZipArchive} from '../helpers';
 import {EngineConfig, Frame} from '../interfaces';
-import {BrowserSingleton} from '../singletons/browser';
+import {PuppeteerBrowser} from '../browser';
+import {logActivity} from '../logging';
 
 interface Params {
     url: string;
@@ -28,7 +29,14 @@ declare global {
 
 export async function screenshotCanvasArchiveDownloads(params: Params): Promise<Output> {
     const context = activity.Context.current();
-    context.log.info('screenshotCanvasArchiveDownloads INVOKED');
+
+    logActivity({
+        context,
+        type: 'info',
+        label: 'screenshotCanvasArchiveDownloads',
+        status: 'INVOKED',
+        data: params,
+    });
 
     const engineConfig: EngineConfig = {
         seed: params.seed,
@@ -58,7 +66,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
 
     const filepath = `${params.dirpath}/${params.seed}.${extension('png')}`;
 
-    const browser = await BrowserSingleton.getConnectedBrowser();
+    const browser = await PuppeteerBrowser.getConnectedBrowser();
 
     const client = await browser.target().createCDPSession();
 
@@ -109,11 +117,24 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
         });
 
         page.on('pageerror', error => {
-            context.log.error(`screenshotCanvasArchiveDownloads ERROR - ${error.message}`);
+            logActivity({
+                context,
+                type: 'error',
+                label: 'screenshotCanvasArchiveDownloads',
+                status: 'ERROR',
+                message: `${error.message}`,
+                data: error,
+            });
         });
 
         page.on('console', message => {
-            context.log.info(`screenshotCanvasArchiveDownloads LOG - ${message.text()}`);
+            logActivity({
+                context,
+                type: 'info',
+                label: 'screenshotCanvasArchiveDownloads',
+                status: 'CONSOLE',
+                message: `${message.text()}`,
+            });
         });
 
         await page.setCacheEnabled(false);
@@ -169,10 +190,18 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
         await browser.disconnect();
     }
 
-    context.log.info(`screenshotCanvasArchiveDownloads COMPLETED`);
-
-    return {
+    const result = {
         screenshot: filepath,
         archive: Object.keys(guids).length > 0 ? archivePath : '',
     };
+
+    logActivity({
+        context,
+        type: 'info',
+        label: 'screenshotCanvasArchiveDownloads',
+        status: 'COMPLETED',
+        data: result,
+    });
+
+    return result;
 }

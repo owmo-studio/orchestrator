@@ -241,6 +241,7 @@ async function run() {
                         timeout: params.timeout,
                         count: params.count,
                         workflowId,
+                        uuid,
                     },
                 ],
                 taskQueue: TASK_QUEUE,

@@ -1,8 +1,8 @@
 import puppeteer, {Browser} from 'puppeteer';
-import {delay, throwIfUndefined} from '../helpers';
+import {delay, throwIfUndefined} from './helpers';
 
-export class BrowserSingleton {
-    static #instance: BrowserSingleton;
+export class PuppeteerBrowser {
+    static #instance: PuppeteerBrowser;
 
     private pid!: number;
     private browser!: Browser | null;
@@ -10,15 +10,15 @@ export class BrowserSingleton {
 
     private constructor() {}
 
-    static get instance(): BrowserSingleton {
-        if (!BrowserSingleton.#instance) {
-            BrowserSingleton.#instance = new BrowserSingleton();
+    static get instance(): PuppeteerBrowser {
+        if (!PuppeteerBrowser.#instance) {
+            PuppeteerBrowser.#instance = new PuppeteerBrowser();
         }
-        return BrowserSingleton.#instance;
+        return PuppeteerBrowser.#instance;
     }
 
     static async init() {
-        const instance = BrowserSingleton.instance;
+        const instance = PuppeteerBrowser.instance;
         if (instance.browser) return;
 
         instance.browser = await puppeteer.launch({
@@ -26,6 +26,7 @@ export class BrowserSingleton {
             args: ['--hide-scrollbars', '--enable-gpu', '--single-process', '--no-zygote', '--no-sandbox'],
             protocolTimeout: 0,
             handleSIGINT: false,
+            handleSIGTERM: false,
             ignoreHTTPSErrors: true,
         });
 
@@ -41,12 +42,12 @@ export class BrowserSingleton {
     }
 
     static async getConnectedBrowser() {
-        const instance = BrowserSingleton.instance;
+        const instance = PuppeteerBrowser.instance;
         return await puppeteer.connect({browserWSEndpoint: instance.browserWSEndpoint});
     }
 
     static async shutdown() {
-        const instance = BrowserSingleton.instance;
+        const instance = PuppeteerBrowser.instance;
         if (instance.browser) {
             process.kill(instance.pid, 'SIGKILL');
             await instance.browser.close();
