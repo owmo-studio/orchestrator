@@ -4,7 +4,7 @@ import {v4 as uuidv4} from 'uuid';
 import {input, number, select, confirm} from '@inquirer/prompts';
 import {Connection, Client} from '@temporalio/client';
 import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE} from '../constants';
-import {exploreFrames, snapshotFrame, snapshotSequence} from '../workflows';
+import {exploreFrames, renderFrame, renderSequence} from '../workflows';
 import {doesDirectoryExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../helpers';
 import seedrandom from 'seedrandom';
 
@@ -29,35 +29,33 @@ async function run() {
                 {
                     name: 'explore',
                     value: 'explore',
-                    description: 'Generate random outputs',
+                    description: 'Generate random seeds to render',
                 },
                 {
-                    name: 'capture',
-                    value: 'capture',
-                    description: 'Capture a specific output',
+                    name: 'render',
+                    value: 'render',
+                    description: 'Render a specific configuration',
                 },
             ],
-            default: 'explore',
         });
 
-        if (goal === 'capture') {
+        if (goal === 'render') {
             type = await select({
-                message: 'What type of capture?',
+                message: 'What type of render?',
                 choices: [
                     {
                         name: 'frame',
-                        value: 'frame',
-                        description: 'Capture a single frame',
+                        value: 'Frame',
+                        description: 'Render a single frame',
                     },
                     {
                         name: 'sequence',
-                        value: 'sequence',
-                        description: 'Capture a sequence of frames',
+                        value: 'Sequence',
+                        description: 'Render a sequence of frames',
                     },
                 ],
             });
-            if (type === 'frame') return 'snapshotFrame';
-            else if (type === 'sequence') return 'snapshotSequence';
+            return `render${type}`;
         }
 
         if (goal === 'explore') {
@@ -70,7 +68,8 @@ async function run() {
     const workflow = await determineWorkflow();
     if (!workflow) return;
 
-    const workflowId = `${workflow}-${uuidv4()}`;
+    const uuid = uuidv4();
+    const workflowId = `${workflow}-${uuid}`;
 
     const params: {[key: string]: any} = {};
 
@@ -94,11 +93,11 @@ async function run() {
         min: 1,
     });
 
-    if (goal === 'capture') {
+    if (goal === 'render') {
         params['seed'] = await input({
             message: 'Seed:',
             required: true,
-            default: makeHashStringUsingPRNG(seedrandom(workflowId)),
+            default: makeHashStringUsingPRNG(seedrandom(uuid.toString())),
         });
     }
 
@@ -110,23 +109,31 @@ async function run() {
         max: 6 * 60 - 1, // 6 hours less 1 minute: force exit before "startToCloseTimeout" occurs
     });
 
-    // convert input minutes to required milliseconds
+    // convert minutes to milliseconds
     params['timeout'] = params['timeout'] * 1000 * 60;
 
     params['dirpath'] = await input({
-        message: 'Root output directory (full path):',
+        message: 'Output directory path:',
         default: isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', '..', 'out')}`,
         validate: path => doesDirectoryExist(path),
     });
 
+    if (goal === 'render') {
+        const makeSubDirectory = await confirm({
+            message: 'Collate into "seed" sub-directory?',
+            default: true,
+        });
+        params['makeSubDir'] = makeSubDirectory;
+    }
+
     if (goal === 'explore') {
-        const useDateVersionFolder = await confirm({
+        const useSubDirectory = await confirm({
             message: 'Put outputs into a dated sub-directory?',
             default: true,
         });
 
-        if (useDateVersionFolder) {
-            let subDirectory = getDirectoryDateString();
+        if (useSubDirectory) {
+            let subDirName = getDirectoryDateString();
 
             const label = await input({
                 message: 'Label for sub-directory (optional):',
@@ -136,12 +143,12 @@ async function run() {
             });
 
             if (label !== '') {
-                subDirectory += `__${label}`;
+                subDirName += `__${label}`;
             }
 
-            subDirectory += `__${workflowId}`;
+            subDirName += `__${uuid}`;
 
-            params['subDirectory'] = subDirectory;
+            params['subDirName'] = subDirName;
         }
 
         params['count'] = await number({
@@ -152,7 +159,7 @@ async function run() {
         });
     }
 
-    if (type === 'sequence') {
+    if (workflow === 'renderSequence') {
         params['startFrame'] = await number({
             message: 'Start frame (0...N)',
             required: true,
@@ -176,14 +183,14 @@ async function run() {
     }
 
     const ok = await confirm({
-        message: 'Confirm (Y) to submit:',
+        message: 'Confirm to submit:',
     });
 
     if (!ok) return;
 
     switch (workflow) {
-        case 'snapshotFrame':
-            await client.workflow.start(snapshotFrame, {
+        case 'renderFrame':
+            await client.workflow.start(renderFrame, {
                 args: [
                     {
                         url: params.url,
@@ -192,14 +199,15 @@ async function run() {
                         height: params.height,
                         timeout: params.timeout,
                         dirpath: params.dirpath,
+                        makeSubDir: params.makeSubDir,
                     },
                 ],
                 taskQueue: TASK_QUEUE,
                 workflowId,
             });
             break;
-        case 'snapshotSequence':
-            await client.workflow.start(snapshotSequence, {
+        case 'renderSequence':
+            await client.workflow.start(renderSequence, {
                 args: [
                     {
                         url: params.url,
@@ -213,6 +221,7 @@ async function run() {
                             start: params.startFrame,
                             end: params.endFrame,
                         },
+                        makeSubDir: params.makeSubDir,
                         workflowId,
                     },
                 ],
@@ -228,10 +237,11 @@ async function run() {
                         width: params.width,
                         height: params.height,
                         dirpath: params.dirpath,
+                        subdirname: params.subDirName,
                         timeout: params.timeout,
                         count: params.count,
-                        subDirectory: params.subDirectory,
                         workflowId,
+                        uuid,
                     },
                 ],
                 taskQueue: TASK_QUEUE,
@@ -240,7 +250,7 @@ async function run() {
             break;
     }
 
-    console.log(`\nWorkflow Submitted > ${workflowId}\n`);
+    console.log(`\nWorkflow Submitted - ${workflowId}\n`);
     return;
 }
 

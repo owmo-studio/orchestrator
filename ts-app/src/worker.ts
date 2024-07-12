@@ -1,7 +1,9 @@
 import * as dotenv from 'dotenv';
+import * as activities from './activities';
+import {PuppeteerBrowser} from './browser';
 import {Worker, NativeConnection} from '@temporalio/worker';
 import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE} from './constants';
-import * as activities from './activities';
+import {delay} from './helpers';
 
 dotenv.config();
 
@@ -15,9 +17,28 @@ async function run() {
         activities,
         taskQueue: TASK_QUEUE,
         workflowsPath: require.resolve('./workflows'),
-        maxConcurrentLocalActivityExecutions: 1,
-        maxConcurrentActivityTaskExecutions: 1,
         maxConcurrentWorkflowTaskExecutions: 1,
+        maxConcurrentActivityTaskExecutions: 1,
+        shutdownGraceTime: 0,
+        shutdownForceTime: 1000,
+    });
+
+    await PuppeteerBrowser.init();
+
+    const shutdown = async () => {
+        await PuppeteerBrowser.shutdown();
+        await delay(1000);
+        process.exit(0);
+    };
+
+    process.on('SIGINT', async () => {
+        console.log('Received SIGINT. Initiating graceful shutdown...');
+        await shutdown();
+    });
+
+    process.on('SIGTERM', async () => {
+        console.log('Received SIGTERM. Initiating graceful shutdown...');
+        await shutdown();
     });
 
     await worker.run();

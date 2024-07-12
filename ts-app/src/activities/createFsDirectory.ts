@@ -1,9 +1,10 @@
 import * as activity from '@temporalio/activity';
+import {logActivity} from '../logging';
 import fs from 'fs';
 
 interface Params {
-    rootdir: string;
-    dir: string;
+    rootPath: string;
+    dirName: string;
 }
 
 interface Output {
@@ -12,22 +13,41 @@ interface Output {
 
 export async function createFsDirectory(params: Params): Promise<Output> {
     const context = activity.Context.current();
-    context.log.info('createFsDirectory INVOKED');
+    logActivity({
+        context,
+        type: 'info',
+        label: 'createFsDirectory',
+        status: 'INVOKED',
+        data: params,
+    });
 
-    if (!fs.existsSync(params.rootdir)) {
-        throw new Error(`createFsDirectory :: root directory "${params.rootdir}" does not exist`);
+    if (!fs.existsSync(params.rootPath)) {
+        throw new Error(`createFsDirectory ERROR - root directory does not exist: "${params.rootPath}"`);
     }
 
-    const dirpath = `${params.rootdir}/${params.dir}`;
+    const dirpath = `${params.rootPath}/${params.dirName}`;
+
+    const output = {dirpath};
 
     if (!fs.existsSync(dirpath)) {
         fs.mkdirSync(dirpath);
-        context.log.info(`createFsDirectory > "${dirpath}" has been created`);
+        logActivity({
+            context,
+            type: 'info',
+            label: 'createFsDirectory',
+            status: 'COMPLETED',
+            data: output,
+        });
     } else {
-        context.log.warn(`createFsDirectory > "${dirpath}" already exists, skipping...`);
+        logActivity({
+            context,
+            type: 'warn',
+            label: 'createFsDirectory',
+            status: 'WARNING',
+            message: 'directory already exists, skipping...',
+            data: output,
+        });
     }
 
-    return {
-        dirpath,
-    };
+    return output;
 }
