@@ -41,7 +41,15 @@ export async function renderFrames(params: Params): Promise<Output> {
 
     const responses = await Promise.all(
         params.seeds.map(seed => {
-            return screenshotCanvasArchiveDownloads({...params, seed, dirpath: outputDirectory});
+            return screenshotCanvasArchiveDownloads({
+                seed,
+                url: params.url,
+                width: params.width,
+                height: params.height,
+                dirpath: outputDirectory,
+                timeout: params.timeout,
+                frame: params.frame,
+            });
         }),
     );
 
