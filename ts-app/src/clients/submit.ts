@@ -79,20 +79,6 @@ async function run() {
         validate: url => isValidURL(url),
     });
 
-    params['width'] = await number({
-        message: 'Width (px):',
-        required: true,
-        default: 1000,
-        min: 1,
-    });
-
-    params['height'] = await number({
-        message: 'Height (px):',
-        required: true,
-        default: 1000,
-        min: 1,
-    });
-
     if (goal === 'render') {
         params['seed'] = await input({
             message: 'Seed:',
@@ -100,17 +86,6 @@ async function run() {
             default: makeHashStringUsingPRNG(seedrandom(uuid.toString())),
         });
     }
-
-    params['timeout'] = await number({
-        message: 'Timeout (min):',
-        required: true,
-        default: 1,
-        min: 1,
-        max: 6 * 60 - 1, // 6 hours less 1 minute: force exit before "startToCloseTimeout" occurs
-    });
-
-    // convert minutes to milliseconds
-    params['timeout'] = params['timeout'] * 1000 * 60;
 
     params['dirpath'] = await input({
         message: 'Output directory path:',
@@ -158,6 +133,31 @@ async function run() {
             min: 1,
         });
     }
+
+    params['width'] = await number({
+        message: 'Width (px):',
+        required: true,
+        default: 1000,
+        min: 1,
+    });
+
+    params['height'] = await number({
+        message: 'Height (px):',
+        required: true,
+        default: 1000,
+        min: 1,
+    });
+
+    params['timeout'] = await number({
+        message: 'Timeout (min):',
+        required: true,
+        default: 6 * 60,
+        min: 1,
+        max: 6 * 60, // 6 hours to match "startToCloseTimeout" occurs
+    });
+
+    // convert minutes to milliseconds
+    params['timeout'] = params['timeout'] * 1000 * 60;
 
     if (workflow === 'renderSequence') {
         params['startFrame'] = await number({

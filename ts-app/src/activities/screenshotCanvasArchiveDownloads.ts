@@ -157,7 +157,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
             setTimeout(() => {
                 clearInterval(interval);
                 resolve('timeout');
-            }, params.timeout);
+            }, params.timeout - 1000);
         });
 
         await page.waitForSelector('canvas');
