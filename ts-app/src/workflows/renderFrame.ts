@@ -9,7 +9,7 @@ interface Params {
     height: number;
     dirpath: string;
     timeout: number;
-    makeSubDir?: boolean;
+    makeSubDir?: string;
     frame?: Frame;
 }
 
@@ -28,10 +28,11 @@ const {screenshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
 
 export async function renderFrame(params: Params): Promise<Output> {
     let outputDirectory = params.dirpath;
+
     if (params.makeSubDir) {
         const {dirpath} = await createFsDirectory({
             rootPath: params.dirpath,
-            dirName: `${params.seed}`,
+            dirName: params.makeSubDir,
         });
         outputDirectory = dirpath;
     }

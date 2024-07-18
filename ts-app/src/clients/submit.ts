@@ -79,53 +79,43 @@ async function run() {
         validate: url => isValidURL(url),
     });
 
-    if (goal === 'render') {
-        params['seed'] = await input({
-            message: 'Seed:',
-            required: true,
-            default: makeHashStringUsingPRNG(seedrandom(uuid.toString())),
-        });
-    }
-
     params['dirpath'] = await input({
         message: 'Output directory path:',
         default: isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', '..', 'out')}`,
         validate: path => doesDirectoryExist(path),
     });
 
-    if (goal === 'render') {
-        const makeSubDirectory = await confirm({
-            message: 'Collate into "seed" sub-directory?',
-            default: true,
+    const useSubDirectory = await confirm({
+        message: 'Put outputs in dated sub-directory?',
+        default: true,
+    });
+
+    if (useSubDirectory) {
+        let subDirName = getDirectoryDateString();
+
+        const label = await input({
+            message: 'Label for sub-directory (optional):',
+            default: '',
+            required: false,
+            validate: label => label === '' || /^[a-zA-Z0-9-]+$/.test(label),
         });
-        params['makeSubDir'] = makeSubDirectory;
-    }
 
-    if (goal === 'explore') {
-        const useSubDirectory = await confirm({
-            message: 'Put outputs into a dated sub-directory?',
-            default: true,
-        });
-
-        if (useSubDirectory) {
-            let subDirName = getDirectoryDateString();
-
-            const label = await input({
-                message: 'Label for sub-directory (optional):',
-                default: '',
-                required: false,
-                validate: label => label === '' || /^[a-zA-Z0-9-]+$/.test(label),
-            });
-
-            if (label !== '') {
-                subDirName += `__${label}`;
-            }
-
-            subDirName += `__${uuid}`;
-
-            params['subDirName'] = subDirName;
+        if (label !== '') {
+            subDirName += `__${label}`;
         }
 
+        subDirName += `__${uuid}`;
+
+        params['subDirName'] = subDirName;
+    }
+
+    if (goal === 'render') {
+        params['seed'] = await input({
+            message: 'Seed:',
+            required: true,
+            default: makeHashStringUsingPRNG(seedrandom(uuid.toString())),
+        });
+    } else if (goal === 'explore') {
         params['count'] = await number({
             message: 'How many do you want? (1...N):',
             required: true,
@@ -153,7 +143,7 @@ async function run() {
         required: true,
         default: 6 * 60,
         min: 1,
-        max: 6 * 60, // 6 hours to match "startToCloseTimeout" occurs
+        max: 6 * 60, // 6 hours to match "startToCloseTimeout"
     });
 
     // convert minutes to milliseconds
@@ -199,7 +189,7 @@ async function run() {
                         height: params.height,
                         timeout: params.timeout,
                         dirpath: params.dirpath,
-                        makeSubDir: params.makeSubDir,
+                        makeSubDir: params.subDirName,
                     },
                 ],
                 taskQueue: TASK_QUEUE,
@@ -221,7 +211,7 @@ async function run() {
                             start: params.startFrame,
                             end: params.endFrame,
                         },
-                        makeSubDir: params.makeSubDir,
+                        makeSubDir: params.subDirName,
                         workflowId,
                     },
                 ],
@@ -237,7 +227,7 @@ async function run() {
                         width: params.width,
                         height: params.height,
                         dirpath: params.dirpath,
-                        subdirname: params.subDirName,
+                        makeSubDir: params.subDirName,
                         timeout: params.timeout,
                         count: params.count,
                         workflowId,

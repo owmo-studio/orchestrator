@@ -11,7 +11,7 @@ interface Params {
     dirpath: string;
     timeout: number;
     sequence: Sequence;
-    makeSubDir: boolean;
+    makeSubDir?: string;
     workflowId: string;
 }
 
@@ -36,10 +36,11 @@ export async function renderSequence(params: Params): Promise<Output> {
     }> = [];
 
     let outputDirectory = params.dirpath;
+
     if (params.makeSubDir) {
         const {dirpath} = await createFsDirectory({
             rootPath: params.dirpath,
-            dirName: `${params.seed}`,
+            dirName: params.makeSubDir,
         });
         outputDirectory = dirpath;
     }

@@ -7,10 +7,10 @@ interface Params {
     width: number;
     height: number;
     dirpath: string;
-    subdirname: string | undefined;
+    workflowId: string;
+    makeSubDir?: string;
     timeout: number;
     count: number;
-    workflowId: string;
     uuid: string;
 }
 
@@ -28,10 +28,10 @@ const {createFsDirectory, makeArrayOfHashes} = proxyActivities<typeof activities
 export async function exploreFrames(params: Params): Promise<Output> {
     let outputDirectory = params.dirpath;
 
-    if (params.subdirname) {
+    if (params.makeSubDir) {
         const {dirpath} = await createFsDirectory({
             rootPath: params.dirpath,
-            dirName: params.subdirname,
+            dirName: params.makeSubDir,
         });
         outputDirectory = dirpath;
     }
