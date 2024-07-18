@@ -4,7 +4,7 @@ import {Frame} from '../interfaces';
 
 interface Params {
     url: string;
-    seed: string;
+    seeds: Array<string>;
     width: number;
     height: number;
     dirpath: string;
@@ -14,8 +14,10 @@ interface Params {
 }
 
 interface Output {
-    image: string;
-    outputs: string;
+    frames: Array<{
+        image: string;
+        outputs: string;
+    }>;
 }
 
 const {createFsDirectory} = proxyActivities<typeof activities>({
@@ -26,7 +28,7 @@ const {screenshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
     startToCloseTimeout: '6 hours',
 });
 
-export async function renderFrame(params: Params): Promise<Output> {
+export async function renderFrames(params: Params): Promise<Output> {
     let outputDirectory = params.dirpath;
 
     if (params.makeSubDir) {
@@ -37,9 +39,20 @@ export async function renderFrame(params: Params): Promise<Output> {
         outputDirectory = dirpath;
     }
 
-    const response = await screenshotCanvasArchiveDownloads({...params, dirpath: outputDirectory});
-    return {
-        image: response.screenshot,
-        outputs: response.archive,
-    };
+    const responses = await Promise.all(
+        params.seeds.map(seed => {
+            return screenshotCanvasArchiveDownloads({...params, seed, dirpath: outputDirectory});
+        }),
+    );
+
+    const frames: Array<{
+        image: string;
+        outputs: string;
+    }> = [];
+
+    for (const response of responses) {
+        frames.push({image: response.screenshot, outputs: response.archive});
+    }
+
+    return {frames};
 }

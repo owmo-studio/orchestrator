@@ -4,7 +4,7 @@ import {v4 as uuidv4} from 'uuid';
 import {input, number, select, confirm} from '@inquirer/prompts';
 import {Connection, Client} from '@temporalio/client';
 import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE} from '../constants';
-import {exploreFrames, renderFrame, renderSequence} from '../workflows';
+import {exploreFrames, renderFrames, renderSequences} from '../workflows';
 import {doesDirectoryExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../helpers';
 import seedrandom from 'seedrandom';
 
@@ -44,13 +44,13 @@ async function run() {
                 message: 'What type of render?',
                 choices: [
                     {
-                        name: 'frame',
-                        value: 'Frame',
+                        name: 'frames',
+                        value: 'Frames',
                         description: 'Render a single frame',
                     },
                     {
-                        name: 'sequence',
-                        value: 'Sequence',
+                        name: 'sequences',
+                        value: 'Sequences',
                         description: 'Render a sequence of frames',
                     },
                 ],
@@ -66,7 +66,11 @@ async function run() {
     };
 
     const workflow = await determineWorkflow();
-    if (!workflow) return;
+
+    if (!workflow) {
+        console.error('no matching workflow, exiting...');
+        return;
+    }
 
     const uuid = uuidv4();
     const workflowId = `${workflow}-${uuid}`;
@@ -110,11 +114,14 @@ async function run() {
     }
 
     if (goal === 'render') {
-        params['seed'] = await input({
-            message: 'Seed:',
+        params['seeds'] = await input({
+            message: 'Seed(s):',
             required: true,
             default: makeHashStringUsingPRNG(seedrandom(uuid.toString())),
+            validate: seeds => /^\w+(,\w+)*$/.test(seeds),
         });
+        params.seeds = params.seeds.split(',');
+        console.log('\n', params.seeds, '\n');
     } else if (goal === 'explore') {
         params['count'] = await number({
             message: 'How many do you want? (1...N):',
@@ -149,7 +156,7 @@ async function run() {
     // convert minutes to milliseconds
     params['timeout'] = params['timeout'] * 1000 * 60;
 
-    if (workflow === 'renderSequence') {
+    if (workflow === 'renderSequences') {
         params['startFrame'] = await number({
             message: 'Start frame (0...N)',
             required: true,
@@ -179,12 +186,12 @@ async function run() {
     if (!ok) return;
 
     switch (workflow) {
-        case 'renderFrame':
-            await client.workflow.start(renderFrame, {
+        case 'renderFrames':
+            await client.workflow.start(renderFrames, {
                 args: [
                     {
                         url: params.url,
-                        seed: params.seed,
+                        seeds: params.seeds,
                         width: params.width,
                         height: params.height,
                         timeout: params.timeout,
@@ -196,12 +203,12 @@ async function run() {
                 workflowId,
             });
             break;
-        case 'renderSequence':
-            await client.workflow.start(renderSequence, {
+        case 'renderSequences':
+            await client.workflow.start(renderSequences, {
                 args: [
                     {
                         url: params.url,
-                        seed: params.seed,
+                        seeds: params.seeds,
                         width: params.width,
                         height: params.height,
                         timeout: params.timeout,
