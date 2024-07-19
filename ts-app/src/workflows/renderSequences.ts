@@ -12,7 +12,7 @@ interface Params {
     timeout: number;
     sequence: Sequence;
     makeSubDir?: string;
-    workflowId: string;
+    uuid: string;
 }
 
 interface Output {
@@ -57,9 +57,10 @@ export async function renderSequences(params: Params): Promise<Output> {
                                     ...params.sequence,
                                     frame,
                                 },
+                                uuid: params.uuid,
                             },
                         ],
-                        workflowId: `${params.workflowId}-s${i}-f${frame}`,
+                        workflowId: `${params.uuid}__${i}-${frame}`,
                     });
                 }),
             );

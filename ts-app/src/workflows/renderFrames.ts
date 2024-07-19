@@ -11,6 +11,7 @@ interface Params {
     timeout: number;
     makeSubDir?: string;
     frame?: Frame;
+    uuid: string;
 }
 
 interface Output {

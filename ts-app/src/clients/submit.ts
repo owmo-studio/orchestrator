@@ -73,7 +73,6 @@ async function run() {
     }
 
     const uuid = uuidv4();
-    const workflowId = `${workflow}-${uuid}`;
 
     const params: {[key: string]: any} = {};
 
@@ -197,10 +196,11 @@ async function run() {
                         timeout: params.timeout,
                         dirpath: params.dirpath,
                         makeSubDir: params.subDirName,
+                        uuid,
                     },
                 ],
                 taskQueue: TASK_QUEUE,
-                workflowId,
+                workflowId: uuid,
             });
             break;
         case 'renderSequences':
@@ -219,11 +219,11 @@ async function run() {
                             end: params.endFrame,
                         },
                         makeSubDir: params.subDirName,
-                        workflowId,
+                        uuid,
                     },
                 ],
                 taskQueue: TASK_QUEUE,
-                workflowId,
+                workflowId: uuid,
             });
             break;
         case 'exploreFrames':
@@ -237,17 +237,16 @@ async function run() {
                         makeSubDir: params.subDirName,
                         timeout: params.timeout,
                         count: params.count,
-                        workflowId,
                         uuid,
                     },
                 ],
                 taskQueue: TASK_QUEUE,
-                workflowId,
+                workflowId: uuid,
             });
             break;
     }
 
-    console.log(`\nWorkflow Submitted - ${workflowId}\n`);
+    console.log(`\nWorkflow Submitted - ${uuid}\n`);
     return;
 }
 

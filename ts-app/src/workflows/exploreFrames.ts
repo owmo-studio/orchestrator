@@ -7,7 +7,6 @@ interface Params {
     width: number;
     height: number;
     dirpath: string;
-    workflowId: string;
     makeSubDir?: string;
     timeout: number;
     count: number;
@@ -43,7 +42,7 @@ export async function exploreFrames(params: Params): Promise<Output> {
                 timeout: params.timeout,
             },
         ],
-        workflowId: `${params.workflowId}-renderFrames`,
+        workflowId: `${params.uuid}__0`,
     });
 
     return {frames: response.frames};
