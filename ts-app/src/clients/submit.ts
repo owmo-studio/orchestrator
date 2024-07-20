@@ -144,16 +144,8 @@ async function run() {
         min: 1,
     });
 
-    params['timeout'] = await number({
-        message: 'Timeout (min):',
-        required: true,
-        default: 6 * 60,
-        min: 1,
-        max: 6 * 60, // 6 hours to match "startToCloseTimeout"
-    });
-
-    // convert minutes to milliseconds
-    params['timeout'] = params['timeout'] * 1000 * 60;
+    // 24 hours (minus 1 minute) to trigger before "startToCloseTimeout"
+    params['timeout'] = 24 * 60 * 60 * 1000 - 1000 * 60;
 
     if (workflow === 'renderSequences') {
         params['startFrame'] = await number({
