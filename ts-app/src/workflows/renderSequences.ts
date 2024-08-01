@@ -1,7 +1,8 @@
 import {proxyActivities} from '@temporalio/workflow';
 import {executeChild} from '@temporalio/workflow';
 import * as activities from '../activities';
-import {Sequence} from '../interfaces';
+import {Sequence, Segment} from '../interfaces';
+import {MAX_CHILD_FRAMES} from '../constants';
 
 interface Params {
     url: string;
@@ -39,33 +40,67 @@ export async function renderSequences(params: Params): Promise<Output> {
 
     const totalFrames = params.sequence.end - params.sequence.start + 1;
     const framePadding = String(params.sequence.end - params.sequence.start).length;
-    const framesToRender: Array<number> = Array.from(new Array(totalFrames), (_, i) => params.sequence.start + i);
+
+    const segmentsToRender: Array<Segment> = [];
+    for (let i = 0; i < totalFrames; i += MAX_CHILD_FRAMES) {
+        const startFrame = i;
+        const endFrame = Math.min(i + (MAX_CHILD_FRAMES - 1), params.sequence.end);
+
+        segmentsToRender.push({
+            fps: params.sequence.fps,
+            start: startFrame,
+            end: endFrame,
+            chunk: Math.floor(endFrame / MAX_CHILD_FRAMES),
+            padding: framePadding,
+        });
+    }
 
     const responses = await Promise.all(
-        params.seeds.map(async (seed, i) => {
+        params.seeds.map(async (seed, seedIndex) => {
             return Promise.all(
-                framesToRender.map(frame => {
-                    return executeChild('renderFrames', {
+                segmentsToRender.map(segment => {
+                    return executeChild('renderSegment', {
                         args: [
                             {
                                 url: params.url,
-                                seeds: [seed],
+                                seed,
                                 width: params.width,
                                 height: params.height,
                                 dirpath: outputDirectory,
                                 timeout: params.timeout,
-                                frame: {
-                                    ...params.sequence,
-                                    frame,
-                                    padding: framePadding,
-                                },
+                                segment,
+                                index: seedIndex,
                                 uuid: params.uuid,
                             },
                         ],
-                        workflowId: `${params.uuid}__${i}-${frame}`,
+                        workflowId: `${params.uuid}__s${seedIndex}__c${segment.chunk}`,
                     });
                 }),
             );
+
+            // return Promise.all(
+            //     framesToRender.map(frame => {
+            //         return executeChild('renderFrames', {
+            //             args: [
+            //                 {
+            //                     url: params.url,
+            //                     seeds: [seed],
+            //                     width: params.width,
+            //                     height: params.height,
+            //                     dirpath: outputDirectory,
+            //                     timeout: params.timeout,
+            //                     frame: {
+            //                         ...params.sequence,
+            //                         frame,
+            //                         padding: framePadding,
+            //                     },
+            //                     uuid: params.uuid,
+            //                 },
+            //             ],
+            //             workflowId: `${params.uuid}__${seedIndex}-${frame}`,
+            //         });
+            //     }),
+            // );
         }),
     );
 
@@ -74,9 +109,9 @@ export async function renderSequences(params: Params): Promise<Output> {
         outputs: string;
     }> = [];
 
-    for (const response of responses) {
-        for (const resp of response) {
-            for (const frame of resp.frames) {
+    for (const seedResponses of responses) {
+        for (const segmentResponses of seedResponses) {
+            for (const frame of segmentResponses.frames) {
                 frames.push({...frame});
             }
         }

@@ -19,7 +19,11 @@ export interface Sequence {
     end: number;
 }
 
-export interface Frame extends Sequence {
-    frame: number;
+export interface Segment extends Sequence {
+    chunk: number;
     padding: number;
+}
+
+export interface Frame extends Segment {
+    frame: number;
 }
