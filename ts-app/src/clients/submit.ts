@@ -82,7 +82,7 @@ async function run() {
         validate: url => isValidURL(url),
     });
 
-    params['dirpath'] = await input({
+    params['outDir'] = await input({
         message: 'Output directory path:',
         default: isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', '..', 'out')}`,
         validate: path => doesDirectoryExist(path),
@@ -94,7 +94,7 @@ async function run() {
     });
 
     if (useSubDirectory) {
-        let subDirName = getDirectoryDateString();
+        let mkDirName = getDirectoryDateString();
 
         const label = await input({
             message: 'Label for sub-directory (optional):',
@@ -104,12 +104,12 @@ async function run() {
         });
 
         if (label !== '') {
-            subDirName += `__${label}`;
+            mkDirName += `__${label}`;
         }
 
-        subDirName += `__${uuid}`;
+        mkDirName += `__${uuid}`;
 
-        params['subDirName'] = subDirName;
+        params['mkDirName'] = mkDirName;
     }
 
     if (goal === 'render') {
@@ -181,14 +181,14 @@ async function run() {
             await client.workflow.start(renderFrames, {
                 args: [
                     {
+                        uuid,
                         url: params.url,
                         seeds: params.seeds,
                         width: params.width,
                         height: params.height,
                         timeout: params.timeout,
-                        dirpath: params.dirpath,
-                        makeSubDir: params.subDirName,
-                        uuid,
+                        outDir: params.outDir,
+                        mkDir: params.mkDirName,
                     },
                 ],
                 taskQueue: TASK_QUEUE,
@@ -199,19 +199,19 @@ async function run() {
             await client.workflow.start(renderSequences, {
                 args: [
                     {
+                        uuid,
                         url: params.url,
                         seeds: params.seeds,
                         width: params.width,
                         height: params.height,
                         timeout: params.timeout,
-                        dirpath: params.dirpath,
+                        outDir: params.outDir,
                         sequence: {
                             fps: params.framerate,
                             start: params.startFrame,
                             end: params.endFrame,
                         },
-                        makeSubDir: params.subDirName,
-                        uuid,
+                        mkDir: params.mkDirName,
                     },
                 ],
                 taskQueue: TASK_QUEUE,
@@ -222,14 +222,14 @@ async function run() {
             await client.workflow.start(exploreFrames, {
                 args: [
                     {
+                        uuid,
                         url: params.url,
                         width: params.width,
                         height: params.height,
-                        dirpath: params.dirpath,
-                        makeSubDir: params.subDirName,
+                        outDir: params.outDir,
                         timeout: params.timeout,
                         count: params.count,
-                        uuid,
+                        mkDir: params.mkDirName,
                     },
                 ],
                 taskQueue: TASK_QUEUE,

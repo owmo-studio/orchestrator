@@ -1,19 +1,13 @@
 import {proxyActivities} from '@temporalio/workflow';
 import {executeChild} from '@temporalio/workflow';
 import * as activities from '../activities';
-import {Sequence, Segment} from '../interfaces';
+import {Sequence, Segment, Render} from '../interfaces';
 import {MAX_CHILD_FRAMES} from '../constants';
 
-interface Params {
-    url: string;
+interface Params extends Render {
     seeds: Array<string>;
-    width: number;
-    height: number;
-    dirpath: string;
-    timeout: number;
     sequence: Sequence;
-    makeSubDir?: string;
-    uuid: string;
+    mkDir?: string;
 }
 
 interface Output {}
@@ -23,14 +17,14 @@ const {createFsDirectory} = proxyActivities<typeof activities>({
 });
 
 export async function renderSequences(params: Params): Promise<Output> {
-    let outputDirectory = params.dirpath;
+    let outputDirectory = params.outDir;
 
-    if (params.makeSubDir) {
-        const {dirpath} = await createFsDirectory({
-            rootPath: params.dirpath,
-            dirName: params.makeSubDir,
+    if (params.mkDir) {
+        const {outDir} = await createFsDirectory({
+            rootPath: params.outDir,
+            dirName: params.mkDir,
         });
-        outputDirectory = dirpath;
+        outputDirectory = outDir;
     }
 
     const totalFrames = params.sequence.end - params.sequence.start + 1;
@@ -57,18 +51,17 @@ export async function renderSequences(params: Params): Promise<Output> {
                     return executeChild('renderSegment', {
                         args: [
                             {
+                                uuid: params.uuid,
                                 url: params.url,
                                 seed,
                                 width: params.width,
                                 height: params.height,
-                                dirpath: outputDirectory,
+                                outDir: outputDirectory,
                                 timeout: params.timeout,
                                 segment,
-                                index: seedIndex,
-                                uuid: params.uuid,
                             },
                         ],
-                        workflowId: `${params.uuid}__s${seedIndex}__c${segment.chunk}`,
+                        workflowId: `${params.uuid}_s[${seedIndex}]_c[${segment.chunk}]`,
                     });
                 }),
             );

@@ -11,7 +11,7 @@ interface Params {
     seed: string;
     width: number;
     height: number;
-    dirpath: string;
+    outDir: string;
     timeout: number;
     frame?: Frame;
 }
@@ -63,7 +63,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
         return ext;
     };
 
-    const filepath = `${params.dirpath}/${params.seed}.${extension('png')}`;
+    const filepath = `${params.outDir}/${params.seed}.${extension('png')}`;
 
     const browser = await PuppeteerBrowser.getConnectedBrowser();
 
@@ -71,13 +71,13 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
 
     await client.send('Browser.setDownloadBehavior', {
         behavior: 'allowAndName',
-        downloadPath: params.dirpath,
+        downloadPath: params.outDir,
         eventsEnabled: true,
     });
 
     const guids: {[key: string]: string} = {};
     const downloadsInProgress: Array<Promise<string>> = [];
-    const archivePath = `${params.dirpath}/${params.seed}.${extension('zip')}`;
+    const archivePath = `${params.outDir}/${params.seed}.${extension('zip')}`;
 
     client.on('Browser.downloadWillBegin', async event => {
         const {suggestedFilename, guid} = event;
@@ -89,7 +89,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
                 client.on('Browser.downloadProgress', async event => {
                     if (guid !== event.guid) return;
                     if (event.state === 'completed') {
-                        fs.renameSync(path.resolve(params.dirpath, event.guid), path.resolve(params.dirpath, guids[event.guid]));
+                        fs.renameSync(path.resolve(params.outDir, event.guid), path.resolve(params.outDir, guids[event.guid]));
                         resolve(guids[event.guid]);
                     } else if (event.state === 'canceled') {
                         reject();
@@ -177,7 +177,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
 
         if (downloadsInProgress.length > 0) {
             const filePaths: Array<string> = [];
-            for (const key of Object.keys(guids)) filePaths.push(path.resolve(params.dirpath, guids[key]));
+            for (const key of Object.keys(guids)) filePaths.push(path.resolve(params.outDir, guids[key]));
             await createZipArchive(filePaths, archivePath);
         }
 

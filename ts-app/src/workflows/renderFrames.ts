@@ -1,17 +1,10 @@
 import {proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
-import {Frame} from '../interfaces';
+import {Render} from '../interfaces';
 
-interface Params {
-    url: string;
+interface Params extends Render {
     seeds: Array<string>;
-    width: number;
-    height: number;
-    dirpath: string;
-    timeout: number;
-    makeSubDir?: string;
-    frame?: Frame;
-    uuid: string;
+    mkDir?: string;
 }
 
 interface Output {}
@@ -25,14 +18,14 @@ const {screenshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
 });
 
 export async function renderFrames(params: Params): Promise<Output> {
-    let outputDirectory = params.dirpath;
+    let outputDirectory = params.outDir;
 
-    if (params.makeSubDir) {
-        const {dirpath} = await createFsDirectory({
-            rootPath: params.dirpath,
-            dirName: params.makeSubDir,
+    if (params.mkDir) {
+        const {outDir} = await createFsDirectory({
+            rootPath: params.outDir,
+            dirName: params.mkDir,
         });
-        outputDirectory = dirpath;
+        outputDirectory = outDir;
     }
 
     await Promise.all(
@@ -42,9 +35,8 @@ export async function renderFrames(params: Params): Promise<Output> {
                 url: params.url,
                 width: params.width,
                 height: params.height,
-                dirpath: outputDirectory,
+                outDir: outputDirectory,
                 timeout: params.timeout,
-                frame: params.frame,
             });
         }),
     );

@@ -1,19 +1,17 @@
-import {executeChild} from '@temporalio/workflow';
-import {Segment} from '../interfaces';
+import {proxyActivities} from '@temporalio/workflow';
+import * as activities from '../activities';
+import {Render, Segment} from '../interfaces';
 
-interface Params {
-    url: string;
+interface Params extends Render {
     seed: string;
-    width: number;
-    height: number;
-    dirpath: string;
-    timeout: number;
     segment: Segment;
-    index: number;
-    uuid: string;
 }
 
 interface Output {}
+
+const {screenshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
+    startToCloseTimeout: '24 hours',
+});
 
 export async function renderSegment(params: Params): Promise<Output> {
     const totalFrames = params.segment.end - params.segment.start + 1;
@@ -21,23 +19,17 @@ export async function renderSegment(params: Params): Promise<Output> {
 
     await Promise.all(
         framesToRender.map(frame => {
-            return executeChild('renderFrames', {
-                args: [
-                    {
-                        url: params.url,
-                        seeds: [params.seed],
-                        width: params.width,
-                        height: params.height,
-                        dirpath: params.dirpath,
-                        timeout: params.timeout,
-                        frame: {
-                            ...params.segment,
-                            frame,
-                        },
-                        uuid: params.uuid,
-                    },
-                ],
-                workflowId: `${params.uuid}__s${params.index}__c${params.segment.chunk}__f${frame}`,
+            return screenshotCanvasArchiveDownloads({
+                seed: params.seed,
+                url: params.url,
+                width: params.width,
+                height: params.height,
+                outDir: params.outDir,
+                timeout: params.timeout,
+                frame: {
+                    ...params.segment,
+                    frame,
+                },
             });
         }),
     );

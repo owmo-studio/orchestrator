@@ -27,3 +27,12 @@ export interface Segment extends Sequence {
 export interface Frame extends Segment {
     frame: number;
 }
+
+export interface Render {
+    uuid: string;
+    url: string;
+    width: number;
+    height: number;
+    outDir: string;
+    timeout: number;
+}

@@ -1,22 +1,20 @@
 import {proxyActivities} from '@temporalio/workflow';
-import {executeChild} from '@temporalio/workflow';
 import * as activities from '../activities';
+import {Render} from '../interfaces';
 
-interface Params {
-    url: string;
-    width: number;
-    height: number;
-    dirpath: string;
-    makeSubDir?: string;
-    timeout: number;
+interface Params extends Render {
     count: number;
-    uuid: string;
+    mkDir?: string;
 }
 
 interface Output {}
 
-const {makeArrayOfHashes} = proxyActivities<typeof activities>({
+const {makeArrayOfHashes, createFsDirectory} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
+});
+
+const {screenshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
+    startToCloseTimeout: '24 hours',
 });
 
 export async function exploreFrames(params: Params): Promise<Output> {
@@ -25,20 +23,27 @@ export async function exploreFrames(params: Params): Promise<Output> {
         count: params.count,
     });
 
-    await executeChild('renderFrames', {
-        args: [
-            {
+    let outputDirectory = params.outDir;
+    if (params.mkDir) {
+        const {outDir} = await createFsDirectory({
+            rootPath: params.outDir,
+            dirName: params.mkDir,
+        });
+        outputDirectory = outDir;
+    }
+
+    await Promise.all(
+        hashes.map(hash => {
+            return screenshotCanvasArchiveDownloads({
+                seed: hash,
                 url: params.url,
-                seeds: hashes,
                 width: params.width,
                 height: params.height,
-                dirpath: params.dirpath,
-                makeSubDir: params.makeSubDir,
+                outDir: outputDirectory,
                 timeout: params.timeout,
-            },
-        ],
-        workflowId: `${params.uuid}__0`,
-    });
+            });
+        }),
+    );
 
     return {};
 }

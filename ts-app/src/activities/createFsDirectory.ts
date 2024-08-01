@@ -8,7 +8,7 @@ interface Params {
 }
 
 interface Output {
-    dirpath: string;
+    outDir: string;
 }
 
 export async function createFsDirectory(params: Params): Promise<Output> {
@@ -25,12 +25,12 @@ export async function createFsDirectory(params: Params): Promise<Output> {
         throw new Error(`createFsDirectory ERROR - root directory does not exist: "${params.rootPath}"`);
     }
 
-    const dirpath = `${params.rootPath}/${params.dirName}`;
+    const outDir = `${params.rootPath}/${params.dirName}`;
 
-    const output = {dirpath};
+    const output = {outDir};
 
-    if (!fs.existsSync(dirpath)) {
-        fs.mkdirSync(dirpath);
+    if (!fs.existsSync(outDir)) {
+        fs.mkdirSync(outDir);
         logActivity({
             context,
             type: 'info',
