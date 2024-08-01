@@ -35,6 +35,7 @@ export async function exploreFrames(params: Params): Promise<Output> {
     await Promise.all(
         hashes.map(hash => {
             return screenshotCanvasArchiveDownloads({
+                uuid: params.uuid,
                 seed: hash,
                 url: params.url,
                 width: params.width,

@@ -20,6 +20,7 @@ export async function renderSegment(params: Params): Promise<Output> {
     await Promise.all(
         framesToRender.map(frame => {
             return screenshotCanvasArchiveDownloads({
+                uuid: params.uuid,
                 seed: params.seed,
                 url: params.url,
                 width: params.width,

@@ -2,17 +2,12 @@ import fs from 'fs';
 import path from 'path';
 import * as activity from '@temporalio/activity';
 import {addOrUpdateQueryParams, createZipArchive} from '../helpers';
-import {EngineConfig, Frame} from '../interfaces';
+import {EngineConfig, Frame, Render} from '../interfaces';
 import {PuppeteerBrowser} from '../browser';
 import {logActivity} from '../logging';
 
-interface Params {
-    url: string;
+interface Params extends Render {
     seed: string;
-    width: number;
-    height: number;
-    outDir: string;
-    timeout: number;
     frame?: Frame;
 }
 

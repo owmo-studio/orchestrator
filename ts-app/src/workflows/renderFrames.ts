@@ -31,6 +31,7 @@ export async function renderFrames(params: Params): Promise<Output> {
     await Promise.all(
         params.seeds.map(seed => {
             return screenshotCanvasArchiveDownloads({
+                uuid: params.uuid,
                 seed,
                 url: params.url,
                 width: params.width,
