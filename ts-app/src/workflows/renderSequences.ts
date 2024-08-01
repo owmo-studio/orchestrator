@@ -16,12 +16,7 @@ interface Params {
     uuid: string;
 }
 
-interface Output {
-    frames: Array<{
-        image: string;
-        outputs: string;
-    }>;
-}
+interface Output {}
 
 const {createFsDirectory} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
@@ -55,7 +50,7 @@ export async function renderSequences(params: Params): Promise<Output> {
         });
     }
 
-    const responses = await Promise.all(
+    await Promise.all(
         params.seeds.map(async (seed, seedIndex) => {
             return Promise.all(
                 segmentsToRender.map(segment => {
@@ -77,45 +72,8 @@ export async function renderSequences(params: Params): Promise<Output> {
                     });
                 }),
             );
-
-            // return Promise.all(
-            //     framesToRender.map(frame => {
-            //         return executeChild('renderFrames', {
-            //             args: [
-            //                 {
-            //                     url: params.url,
-            //                     seeds: [seed],
-            //                     width: params.width,
-            //                     height: params.height,
-            //                     dirpath: outputDirectory,
-            //                     timeout: params.timeout,
-            //                     frame: {
-            //                         ...params.sequence,
-            //                         frame,
-            //                         padding: framePadding,
-            //                     },
-            //                     uuid: params.uuid,
-            //                 },
-            //             ],
-            //             workflowId: `${params.uuid}__${seedIndex}-${frame}`,
-            //         });
-            //     }),
-            // );
         }),
     );
 
-    const frames: Array<{
-        image: string;
-        outputs: string;
-    }> = [];
-
-    for (const seedResponses of responses) {
-        for (const segmentResponses of seedResponses) {
-            for (const frame of segmentResponses.frames) {
-                frames.push({...frame});
-            }
-        }
-    }
-
-    return {frames};
+    return {};
 }

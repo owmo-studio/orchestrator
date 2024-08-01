@@ -13,18 +13,13 @@ interface Params {
     uuid: string;
 }
 
-interface Output {
-    frames: Array<{
-        image: string;
-        outputs: string;
-    }>;
-}
+interface Output {}
 
 export async function renderSegment(params: Params): Promise<Output> {
     const totalFrames = params.segment.end - params.segment.start + 1;
     const framesToRender: Array<number> = Array.from(new Array(totalFrames), (_, i) => params.segment.start + i);
 
-    const responses = await Promise.all(
+    await Promise.all(
         framesToRender.map(frame => {
             return executeChild('renderFrames', {
                 args: [
@@ -47,16 +42,5 @@ export async function renderSegment(params: Params): Promise<Output> {
         }),
     );
 
-    const frames: Array<{
-        image: string;
-        outputs: string;
-    }> = [];
-
-    for (const response of responses) {
-        for (const frame of response.frames) {
-            frames.push({...frame});
-        }
-    }
-
-    return {frames};
+    return {};
 }

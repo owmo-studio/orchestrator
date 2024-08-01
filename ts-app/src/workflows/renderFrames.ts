@@ -14,12 +14,7 @@ interface Params {
     uuid: string;
 }
 
-interface Output {
-    frames: Array<{
-        image: string;
-        outputs: string;
-    }>;
-}
+interface Output {}
 
 const {createFsDirectory} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
@@ -40,7 +35,7 @@ export async function renderFrames(params: Params): Promise<Output> {
         outputDirectory = dirpath;
     }
 
-    const responses = await Promise.all(
+    await Promise.all(
         params.seeds.map(seed => {
             return screenshotCanvasArchiveDownloads({
                 seed,
@@ -54,14 +49,5 @@ export async function renderFrames(params: Params): Promise<Output> {
         }),
     );
 
-    const frames: Array<{
-        image: string;
-        outputs: string;
-    }> = [];
-
-    for (const response of responses) {
-        frames.push({image: response.screenshot, outputs: response.archive});
-    }
-
-    return {frames};
+    return {};
 }

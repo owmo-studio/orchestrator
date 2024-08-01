@@ -13,12 +13,7 @@ interface Params {
     uuid: string;
 }
 
-interface Output {
-    frames: Array<{
-        image: string;
-        outputs: string;
-    }>;
-}
+interface Output {}
 
 const {makeArrayOfHashes} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
@@ -30,7 +25,7 @@ export async function exploreFrames(params: Params): Promise<Output> {
         count: params.count,
     });
 
-    const response = await executeChild('renderFrames', {
+    await executeChild('renderFrames', {
         args: [
             {
                 url: params.url,
@@ -45,5 +40,5 @@ export async function exploreFrames(params: Params): Promise<Output> {
         workflowId: `${params.uuid}__0`,
     });
 
-    return {frames: response.frames};
+    return {};
 }
