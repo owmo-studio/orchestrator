@@ -57,8 +57,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
 
     const extension = (ext: string) => {
         if (params.frame) {
-            const maxDigits = String(params.frame.end - params.frame.start).length;
-            const paddedFrame = String(params.frame.frame).padStart(maxDigits, '0');
+            const paddedFrame = String(params.frame.frame).padStart(params.frame.padding, '0');
             return `${paddedFrame}.${ext}`;
         }
         return ext;

@@ -21,4 +21,5 @@ export interface Sequence {
 
 export interface Frame extends Sequence {
     frame: number;
+    padding: number;
 }

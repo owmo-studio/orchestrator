@@ -38,6 +38,7 @@ export async function renderSequences(params: Params): Promise<Output> {
     }
 
     const totalFrames = params.sequence.end - params.sequence.start + 1;
+    const framePadding = String(params.sequence.end - params.sequence.start).length;
     const framesToRender: Array<number> = Array.from(new Array(totalFrames), (_, i) => params.sequence.start + i);
 
     const responses = await Promise.all(
@@ -56,6 +57,7 @@ export async function renderSequences(params: Params): Promise<Output> {
                                 frame: {
                                     ...params.sequence,
                                     frame,
+                                    padding: framePadding,
                                 },
                                 uuid: params.uuid,
                             },

@@ -156,7 +156,7 @@ async function run() {
         });
 
         params['endFrame'] = await number({
-            message: 'End frame (Start Frame + 0...N):',
+            message: 'End frame (Start + 0...N):',
             required: true,
             default: params['startFrame'] + 1,
             min: params['startFrame'],
