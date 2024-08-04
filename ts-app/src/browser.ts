@@ -1,5 +1,6 @@
 import puppeteer, {Browser} from 'puppeteer';
 import {delay, throwIfUndefined} from './helpers';
+import ps from 'ps-node';
 
 export class PuppeteerBrowser {
     static #instance: PuppeteerBrowser;
@@ -7,6 +8,7 @@ export class PuppeteerBrowser {
     private pid!: number;
     private browser!: Browser | null;
     private browserWSEndpoint!: string;
+    private monitoringInterval!: NodeJS.Timeout;
 
     private constructor() {}
 
@@ -18,10 +20,13 @@ export class PuppeteerBrowser {
     }
 
     static async init() {
-        const instance = PuppeteerBrowser.instance;
-        if (instance.browser) return;
+        if (this.instance.browser) return;
+        await this.launchBrowser();
+        this.startMonitoring();
+    }
 
-        instance.browser = await puppeteer.launch({
+    private static async launchBrowser() {
+        this.instance.browser = await puppeteer.launch({
             headless: 'shell',
             args: ['--hide-scrollbars', '--enable-gpu', '--single-process', '--no-zygote', '--no-sandbox'],
             protocolTimeout: 0,
@@ -30,28 +35,54 @@ export class PuppeteerBrowser {
             ignoreHTTPSErrors: true,
         });
 
-        instance.browserWSEndpoint = instance.browser.wsEndpoint();
+        this.instance.browserWSEndpoint = this.instance.browser.wsEndpoint();
 
-        while (!instance.browser.process()) {
-            await delay(500);
+        while (!this.instance.browser.process()) {
+            await delay(1000);
         }
 
-        const {pid} = instance.browser.process() ?? {pid: undefined};
+        const {pid} = this.instance.browser.process() ?? {pid: undefined};
         throwIfUndefined(pid);
-        instance.pid = pid;
+        this.instance.pid = pid;
+    }
+
+    private static startMonitoring() {
+        if (this.instance.monitoringInterval) clearInterval(this.instance.monitoringInterval);
+        this.instance.monitoringInterval = setInterval(async () => {
+            const isRunning = await this.isProcessRunning(this.instance.pid);
+            if (!isRunning) {
+                console.warn(`Puppeteer process with PID ${this.instance.pid} is not running. Restarting...`);
+                await PuppeteerBrowser.launchBrowser();
+            }
+        }, 1000);
+    }
+
+    private static async isProcessRunning(pid: number): Promise<boolean> {
+        return new Promise(resolve => {
+            ps.lookup({pid}, (err, resultList) => {
+                if (err) {
+                    console.error(err);
+                    resolve(false);
+                } else {
+                    resolve(resultList.length > 0);
+                }
+            });
+        });
     }
 
     static async getConnectedBrowser() {
-        const instance = PuppeteerBrowser.instance;
-        return await puppeteer.connect({browserWSEndpoint: instance.browserWSEndpoint});
+        return await puppeteer.connect({browserWSEndpoint: this.instance.browserWSEndpoint});
     }
 
     static async shutdown() {
-        const instance = PuppeteerBrowser.instance;
-        if (instance.browser) {
-            process.kill(instance.pid, 'SIGKILL');
-            await instance.browser.close();
-            instance.browser = null;
+        if (this.instance.monitoringInterval) {
+            clearInterval(this.instance.monitoringInterval);
+        }
+
+        if (this.instance.browser) {
+            process.kill(this.instance.pid, 'SIGKILL');
+            await this.instance.browser.close();
+            this.instance.browser = null;
         }
     }
 }

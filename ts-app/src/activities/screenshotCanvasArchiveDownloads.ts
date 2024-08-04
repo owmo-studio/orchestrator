@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import * as activity from '@temporalio/activity';
-import {addOrUpdateQueryParams, createZipArchive} from '../helpers';
+import {addOrUpdateQueryParams, createZipArchive, delay} from '../helpers';
 import {EngineConfig, Frame, Render} from '../interfaces';
 import {PuppeteerBrowser} from '../browser';
 import {logActivity} from '../logging';
@@ -174,6 +174,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
             const filePaths: Array<string> = [];
             for (const key of Object.keys(guids)) filePaths.push(path.resolve(params.outDir, guids[key]));
             await createZipArchive(filePaths, archivePath);
+            await delay(1000);
         }
 
         await page.close();
