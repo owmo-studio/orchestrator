@@ -179,7 +179,8 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
 
         await page.close();
     } catch (e) {
-        console.log(e);
+        console.error(e);
+        throw Error(`${e}`);
     } finally {
         await client.detach();
         await browser.disconnect();

@@ -49,12 +49,11 @@ export class PuppeteerBrowser {
     private static startMonitoring() {
         if (this.instance.monitoringInterval) clearInterval(this.instance.monitoringInterval);
         this.instance.monitoringInterval = setInterval(async () => {
-            const isRunning = await this.isProcessRunning(this.instance.pid);
-            if (!isRunning) {
+            if (!(await this.isProcessRunning(this.instance.pid))) {
                 console.warn(`Puppeteer process with PID ${this.instance.pid} is not running. Restarting...`);
                 await PuppeteerBrowser.launchBrowser();
             }
-        }, 1000);
+        }, 5000);
     }
 
     private static async isProcessRunning(pid: number): Promise<boolean> {
