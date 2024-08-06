@@ -4,7 +4,7 @@ import {v4 as uuidv4} from 'uuid';
 import {input, number, select, confirm} from '@inquirer/prompts';
 import {Connection, Client} from '@temporalio/client';
 import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE} from '../constants';
-import {exploreFrames, renderFrames, renderSequences} from '../workflows';
+import {exploreSeeds, renderFrames, renderSequences} from '../workflows';
 import {doesDirectoryExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../helpers';
 import seedrandom from 'seedrandom';
 
@@ -44,14 +44,14 @@ async function run() {
                 message: 'What type of render?',
                 choices: [
                     {
-                        name: 'frames',
+                        name: 'frame(s)',
                         value: 'Frames',
-                        description: 'Render a single frame',
+                        description: 'Render single seeded frame(s)',
                     },
                     {
-                        name: 'sequences',
+                        name: 'sequence(s)',
                         value: 'Sequences',
-                        description: 'Render a sequence of frames',
+                        description: 'Render sequence(s) of seeded frame(s)',
                     },
                 ],
             });
@@ -59,7 +59,7 @@ async function run() {
         }
 
         if (goal === 'explore') {
-            return 'exploreFrames';
+            return 'exploreSeeds';
         }
 
         return;
@@ -242,8 +242,8 @@ async function run() {
                 workflowId: uuid,
             });
             break;
-        case 'exploreFrames':
-            await client.workflow.start(exploreFrames, {
+        case 'exploreSeeds':
+            await client.workflow.start(exploreSeeds, {
                 args: [
                     {
                         uuid,

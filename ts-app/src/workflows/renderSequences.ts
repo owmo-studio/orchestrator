@@ -41,16 +41,6 @@ export async function renderSequences(params: Params): Promise<void> {
     const framesToRender = Array.from(uniqueFrames);
     const segmentsToRender: Array<Segment> = [];
 
-    // let chunk: number = 0;
-    // for (let i = 0; i < framesToRender.length; i += MAX_CHILD_FRAMES) {
-    //     segmentsToRender.push({
-    //         chunk,
-    //         frames: framesToRender.slice(i, Math.min(i + (MAX_CHILD_FRAMES - 1), framesToRender.length)),
-    //         ...params.sequence,
-    //     });
-    //     chunk++;
-    // }
-
     let chunk: number = 0;
     for (let i = 0; i < framesToRender.length; i += MAX_CHILD_FRAMES) {
         segmentsToRender.push({

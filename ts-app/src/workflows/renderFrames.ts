@@ -12,8 +12,6 @@ interface Params {
     mkDir?: string;
 }
 
-interface Output {}
-
 const {createFsDirectory} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
 });
@@ -22,7 +20,7 @@ const {screenshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
     startToCloseTimeout: '24 hours',
 });
 
-export async function renderFrames(params: Params): Promise<Output> {
+export async function renderFrames(params: Params): Promise<void> {
     let outputDirectory = params.outDir;
 
     if (params.mkDir) {
@@ -52,6 +50,4 @@ export async function renderFrames(params: Params): Promise<Output> {
             });
         }),
     );
-
-    return {};
 }

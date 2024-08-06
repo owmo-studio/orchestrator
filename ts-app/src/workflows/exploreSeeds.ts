@@ -12,8 +12,6 @@ interface Params {
     mkDir?: string;
 }
 
-interface Output {}
-
 const {makeArrayOfHashes, createFsDirectory} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
 });
@@ -22,7 +20,7 @@ const {screenshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
     startToCloseTimeout: '24 hours',
 });
 
-export async function exploreFrames(params: Params): Promise<Output> {
+export async function exploreSeeds(params: Params): Promise<void> {
     const {hashes} = await makeArrayOfHashes({
         uuid: params.uuid,
         count: params.count,
@@ -56,6 +54,4 @@ export async function exploreFrames(params: Params): Promise<Output> {
             });
         }),
     );
-
-    return {};
 }

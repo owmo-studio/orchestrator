@@ -15,6 +15,22 @@ export interface EngineConfig {
 
 export type Frame = number;
 
+export interface RenderFrame {
+    uuid: string;
+    seed: string;
+    url: string;
+    width: number;
+    height: number;
+    outDir: string;
+    timeout: number;
+    frame: {
+        fps: number;
+        index: Frame;
+        padding: number;
+        isPadded: boolean;
+    };
+}
+
 export interface FrameRange {
     start: Frame;
     end: Frame;
@@ -31,20 +47,4 @@ export interface Segment {
     frames: Array<Frame>;
     padding: number;
     fps: number;
-}
-
-export interface RenderFrame {
-    uuid: string;
-    seed: string;
-    url: string;
-    width: number;
-    height: number;
-    outDir: string;
-    timeout: number;
-    frame: {
-        fps: number;
-        index: Frame;
-        padding: number;
-        isPadded: boolean;
-    };
 }
