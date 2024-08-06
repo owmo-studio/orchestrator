@@ -9,6 +9,7 @@ import {logActivity} from '../logging';
 interface Params extends RenderFrame {}
 
 interface Output {
+    timeToRender: string;
     screenshot: string;
     archive: string;
 }
@@ -29,6 +30,8 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
         status: 'INVOKED',
         data: params,
     });
+
+    const startTime: Date = new Date();
 
     const engineConfig: EngineConfig = {
         seed: params.seed,
@@ -183,9 +186,23 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
         await browser.disconnect();
     }
 
+    const endTime: Date = new Date();
+
+    const diff: number = endTime.getTime() - startTime.getTime();
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    const remainingSeconds = seconds % 60;
+
+    function pad(num: number) {
+        return num < 10 ? '0' + num : num;
+    }
+
     const result = {
         screenshot: filepath,
         archive: Object.keys(guids).length > 0 ? archivePath : '',
+        timeToRender: `${pad(hours)}:${pad(remainingMinutes)}:${pad(remainingSeconds)}`,
     };
 
     logActivity({
