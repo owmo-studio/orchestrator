@@ -2,14 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import * as activity from '@temporalio/activity';
 import {addOrUpdateQueryParams, createZipArchive, delay} from '../helpers';
-import {EngineConfig, Frame, Render} from '../interfaces';
+import {EngineConfig, RenderFrame} from '../interfaces';
 import {PuppeteerBrowser} from '../browser';
 import {logActivity} from '../logging';
 
-interface Params extends Render {
-    seed: string;
-    frame?: Frame;
-}
+interface Params extends RenderFrame {}
 
 interface Output {
     screenshot: string;
@@ -37,8 +34,8 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
         seed: params.seed,
         runConfig: {
             method: 'frames',
-            frame: params.frame?.frame ?? 0,
-            framerate: params.frame?.fps ?? 30,
+            frame: params.frame.index,
+            framerate: params.frame.fps,
         },
         fitConfig: {
             method: 'exact',
@@ -51,8 +48,8 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
     const URL = addOrUpdateQueryParams(params.url, 'config', JSON.stringify(engineConfig));
 
     const extension = (ext: string) => {
-        if (params.frame) {
-            const paddedFrame = String(params.frame.frame).padStart(params.frame.padding, '0');
+        if (params.frame.isPadded) {
+            const paddedFrame = String(params.frame.index).padStart(params.frame.padding, '0');
             return `${paddedFrame}.${ext}`;
         }
         return ext;

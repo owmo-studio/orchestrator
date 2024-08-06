@@ -148,18 +148,42 @@ async function run() {
     params['timeout'] = 24 * 60 * 60 * 1000 - 1000 * 60;
 
     if (workflow === 'renderSequences') {
-        params['startFrame'] = await number({
-            message: 'Start frame (0...N)',
+        const frameRange = await input({
+            message: 'Frame range(s):',
             required: true,
-            default: 0,
-            min: 0,
+            default: '0',
+            validate: input => /^(\d+(-\d+)?)(,(\d+(-\d+)?))*$/.test(input),
         });
 
-        params['endFrame'] = await number({
-            message: 'End frame (Start + 0...N):',
+        params['frameRanges'] = [];
+
+        let low = Infinity;
+        let high = -Infinity;
+
+        const ranges = frameRange.split(',');
+        for (const range of ranges) {
+            const frames = range.split('-');
+            if (frames.length > 2) throw new Error(`Frame Range "${range}" is not supported`);
+
+            const frameRange = {
+                start: parseInt(frames[0]),
+                end: parseInt(frames[frames.length === 2 ? 1 : 0]),
+            };
+
+            if (frameRange.start > frameRange.end) throw new Error(`Frame Range "${range}" cannot have start greater than end`);
+            if (frameRange.start < 0 || frameRange.end < 0) throw new Error(`Frame Range "${range} cannot be less than zero`);
+
+            params['frameRanges'].push(frameRange);
+
+            low = Math.min(low, frameRange.start);
+            high = Math.max(high, frameRange.end);
+        }
+
+        params['padding'] = await number({
+            message: 'Frame padding:',
             required: true,
-            default: params['startFrame'] + 1,
-            min: params['startFrame'],
+            default: String(low - high).length - 1,
+            min: String(low - high).length - 1,
         });
 
         params['framerate'] = await number({
@@ -208,8 +232,8 @@ async function run() {
                         outDir: params.outDir,
                         sequence: {
                             fps: params.framerate,
-                            start: params.startFrame,
-                            end: params.endFrame,
+                            padding: params.padding,
+                            ranges: params.frameRanges,
                         },
                         mkDir: params.mkDirName,
                     },

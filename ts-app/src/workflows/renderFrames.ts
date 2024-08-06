@@ -1,8 +1,13 @@
 import {proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
-import {Render} from '../interfaces';
 
-interface Params extends Render {
+interface Params {
+    uuid: string;
+    url: string;
+    width: number;
+    height: number;
+    outDir: string;
+    timeout: number;
     seeds: Array<string>;
     mkDir?: string;
 }
@@ -38,6 +43,12 @@ export async function renderFrames(params: Params): Promise<Output> {
                 height: params.height,
                 outDir: outputDirectory,
                 timeout: params.timeout,
+                frame: {
+                    fps: 1,
+                    index: 0,
+                    padding: 0,
+                    isPadded: false,
+                },
             });
         }),
     );

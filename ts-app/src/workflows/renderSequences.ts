@@ -1,22 +1,26 @@
 import {proxyActivities} from '@temporalio/workflow';
 import {executeChild} from '@temporalio/workflow';
 import * as activities from '../activities';
-import {Sequence, Segment, Render} from '../interfaces';
+import {Sequence, Segment} from '../interfaces';
 import {MAX_CHILD_FRAMES} from '../constants';
 
-interface Params extends Render {
+interface Params {
+    uuid: string;
+    url: string;
+    width: number;
+    height: number;
+    outDir: string;
+    timeout: number;
     seeds: Array<string>;
     sequence: Sequence;
     mkDir?: string;
 }
 
-interface Output {}
-
 const {createFsDirectory} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
 });
 
-export async function renderSequences(params: Params): Promise<Output> {
+export async function renderSequences(params: Params): Promise<void> {
     let outputDirectory = params.outDir;
 
     if (params.mkDir) {
@@ -27,21 +31,35 @@ export async function renderSequences(params: Params): Promise<Output> {
         outputDirectory = outDir;
     }
 
-    const totalFrames = params.sequence.end - params.sequence.start + 1;
-    const framePadding = String(params.sequence.end - params.sequence.start).length;
+    const uniqueFrames: Set<number> = new Set();
+    for (const frameRange of params.sequence.ranges) {
+        for (let f = frameRange.start; f <= frameRange.end; f++) {
+            uniqueFrames.add(f);
+        }
+    }
 
+    const framesToRender = Array.from(uniqueFrames);
     const segmentsToRender: Array<Segment> = [];
-    for (let i = 0; i < totalFrames; i += MAX_CHILD_FRAMES) {
-        const startFrame = i;
-        const endFrame = Math.min(i + (MAX_CHILD_FRAMES - 1), params.sequence.end);
 
+    // let chunk: number = 0;
+    // for (let i = 0; i < framesToRender.length; i += MAX_CHILD_FRAMES) {
+    //     segmentsToRender.push({
+    //         chunk,
+    //         frames: framesToRender.slice(i, Math.min(i + (MAX_CHILD_FRAMES - 1), framesToRender.length)),
+    //         ...params.sequence,
+    //     });
+    //     chunk++;
+    // }
+
+    let chunk: number = 0;
+    for (let i = 0; i < framesToRender.length; i += MAX_CHILD_FRAMES) {
         segmentsToRender.push({
+            chunk,
+            frames: framesToRender.slice(i, i + MAX_CHILD_FRAMES),
+            padding: params.sequence.padding,
             fps: params.sequence.fps,
-            start: startFrame,
-            end: endFrame,
-            chunk: Math.floor(endFrame / MAX_CHILD_FRAMES),
-            padding: framePadding,
         });
+        chunk++;
     }
 
     await Promise.all(
@@ -67,6 +85,4 @@ export async function renderSequences(params: Params): Promise<Output> {
             );
         }),
     );
-
-    return {};
 }
