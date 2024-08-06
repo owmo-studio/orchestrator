@@ -92,7 +92,6 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
                 });
             }),
         );
-        1;
     });
 
     try {

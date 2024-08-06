@@ -182,8 +182,8 @@ async function run() {
         params['padding'] = await number({
             message: 'Frame padding:',
             required: true,
-            default: String(low - high).length - 1,
-            min: String(low - high).length - 1,
+            default: String(high - low).length,
+            min: String(high - low).length,
         });
 
         params['framerate'] = await number({
