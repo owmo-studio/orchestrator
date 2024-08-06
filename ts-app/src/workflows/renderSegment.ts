@@ -1,24 +1,25 @@
 import {proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
-import {Render, Segment} from '../interfaces';
+import {Segment} from '../interfaces';
 
-interface Params extends Render {
+interface Params {
+    uuid: string;
+    url: string;
+    width: number;
+    height: number;
+    outDir: string;
+    timeout: number;
     seed: string;
     segment: Segment;
 }
-
-interface Output {}
 
 const {screenshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
     startToCloseTimeout: '24 hours',
 });
 
-export async function renderSegment(params: Params): Promise<Output> {
-    const totalFrames = params.segment.end - params.segment.start + 1;
-    const framesToRender: Array<number> = Array.from(new Array(totalFrames), (_, i) => params.segment.start + i);
-
+export async function renderSegment(params: Params): Promise<void> {
     await Promise.all(
-        framesToRender.map(frame => {
+        params.segment.frames.map(frame => {
             return screenshotCanvasArchiveDownloads({
                 uuid: params.uuid,
                 seed: params.seed,
@@ -28,12 +29,12 @@ export async function renderSegment(params: Params): Promise<Output> {
                 outDir: params.outDir,
                 timeout: params.timeout,
                 frame: {
-                    ...params.segment,
-                    frame,
+                    index: frame,
+                    fps: params.segment.fps,
+                    padding: params.segment.padding,
+                    isPadded: true,
                 },
             });
         }),
     );
-
-    return {};
 }

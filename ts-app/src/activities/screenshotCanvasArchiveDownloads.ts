@@ -2,16 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import * as activity from '@temporalio/activity';
 import {addOrUpdateQueryParams, createZipArchive, delay} from '../helpers';
-import {EngineConfig, Frame, Render} from '../interfaces';
+import {EngineConfig, RenderFrame} from '../interfaces';
 import {PuppeteerBrowser} from '../browser';
 import {logActivity} from '../logging';
 
-interface Params extends Render {
-    seed: string;
-    frame?: Frame;
-}
+interface Params extends RenderFrame {}
 
 interface Output {
+    timeToRender: string;
     screenshot: string;
     archive: string;
 }
@@ -33,12 +31,14 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
         data: params,
     });
 
+    const startTime: Date = new Date();
+
     const engineConfig: EngineConfig = {
         seed: params.seed,
         runConfig: {
             method: 'frames',
-            frame: params.frame?.frame ?? 0,
-            framerate: params.frame?.fps ?? 30,
+            frame: params.frame.index,
+            framerate: params.frame.fps,
         },
         fitConfig: {
             method: 'exact',
@@ -51,8 +51,8 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
     const URL = addOrUpdateQueryParams(params.url, 'config', JSON.stringify(engineConfig));
 
     const extension = (ext: string) => {
-        if (params.frame) {
-            const paddedFrame = String(params.frame.frame).padStart(params.frame.padding, '0');
+        if (params.frame.isPadded) {
+            const paddedFrame = String(params.frame.index).padStart(params.frame.padding, '0');
             return `${paddedFrame}.${ext}`;
         }
         return ext;
@@ -92,7 +92,6 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
                 });
             }),
         );
-        1;
     });
 
     try {
@@ -186,9 +185,23 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
         await browser.disconnect();
     }
 
+    const endTime: Date = new Date();
+
+    const diff: number = endTime.getTime() - startTime.getTime();
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    const remainingSeconds = seconds % 60;
+
+    function pad(num: number) {
+        return num < 10 ? '0' + num : num;
+    }
+
     const result = {
         screenshot: filepath,
         archive: Object.keys(guids).length > 0 ? archivePath : '',
+        timeToRender: `${pad(hours)}:${pad(remainingMinutes)}:${pad(remainingSeconds)}`,
     };
 
     logActivity({
