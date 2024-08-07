@@ -87,7 +87,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
                         fs.renameSync(path.resolve(params.outDir, event.guid), path.resolve(params.outDir, guids[event.guid]));
                         resolve(guids[event.guid]);
                     } else if (event.state === 'canceled') {
-                        reject();
+                        reject('canceled');
                     }
                 });
             }),
@@ -167,7 +167,12 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
             },
         });
 
-        await Promise.all(downloadsInProgress);
+        try {
+            await Promise.all(downloadsInProgress);
+        } catch (err) {
+            console.log(err);
+            throw err;
+        }
 
         if (downloadsInProgress.length > 0) {
             const filePaths: Array<string> = [];
