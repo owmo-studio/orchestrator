@@ -79,19 +79,28 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
         const newFileName = `${params.seed}.${suggestedFilename}`;
         guids[guid] = newFileName;
 
-        downloadsInProgress.push(
-            new Promise((resolve, reject) => {
-                client.on('Browser.downloadProgress', async event => {
-                    if (guid !== event.guid) return;
-                    if (event.state === 'completed') {
+        const downloadPromise: Promise<string> = new Promise((resolve, reject) => {
+            client.on('Browser.downloadProgress', async event => {
+                if (guid !== event.guid) return;
+                if (event.state === 'completed') {
+                    try {
                         fs.renameSync(path.resolve(params.outDir, event.guid), path.resolve(params.outDir, guids[event.guid]));
                         resolve(guids[event.guid]);
-                    } else if (event.state === 'canceled') {
-                        reject('canceled');
+                    } catch (err) {
+                        reject(err);
                     }
-                });
-            }),
-        );
+                } else if (event.state === 'canceled') {
+                    reject('canceled');
+                }
+            });
+        });
+
+        downloadPromise.catch(err => {
+            console.log(err);
+            throw err;
+        });
+
+        downloadsInProgress.push(downloadPromise);
     });
 
     try {
@@ -167,12 +176,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
             },
         });
 
-        try {
-            await Promise.all(downloadsInProgress);
-        } catch (err) {
-            console.log(err);
-            throw err;
-        }
+        await Promise.all(downloadsInProgress);
 
         if (downloadsInProgress.length > 0) {
             const filePaths: Array<string> = [];
