@@ -24,17 +24,6 @@ function pad(num: number) {
     return num < 10 ? '0' + num : num;
 }
 
-async function cleanupPartialDownloads(outDir: string) {
-    const files = fs.readdirSync(outDir);
-    files.forEach(file => {
-        const filePath = path.join(outDir, file);
-        const stats = fs.statSync(filePath);
-        if (stats.size === 0 || file.endsWith('.crdownload')) {
-            fs.unlinkSync(filePath);
-        }
-    });
-}
-
 export async function screenshotCanvasArchiveDownloads(params: Params): Promise<Output> {
     const context = activity.Context.current();
 
@@ -94,19 +83,12 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
         const newFileName = `${params.seed}.${suggestedFilename}`;
         guids[guid] = newFileName;
 
-        const downloadPromise: Promise<string> = new Promise((resolve, reject) => {
+        const downloadPromise: Promise<string> = new Promise(resolve => {
             client.on('Browser.downloadProgress', async event => {
                 if (guid !== event.guid) return;
                 if (event.state === 'completed') {
-                    try {
-                        fs.renameSync(path.resolve(params.outDir, event.guid), path.resolve(params.outDir, guids[event.guid]));
-                        resolve(guids[event.guid]);
-                    } catch (err) {
-                        reject(err);
-                    }
-                } else if (event.state === 'canceled') {
-                    reject('canceled');
-                    console.log('download cancelled, cleaning up partial downloads...');
+                    fs.renameSync(path.resolve(params.outDir, event.guid), path.resolve(params.outDir, guids[event.guid]));
+                    resolve(guids[event.guid]);
                 }
             });
         });
@@ -211,7 +193,6 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
     } finally {
         await client.detach();
         await browser.disconnect();
-        await cleanupPartialDownloads(params.outDir);
     }
 
     const endTime: Date = new Date();
