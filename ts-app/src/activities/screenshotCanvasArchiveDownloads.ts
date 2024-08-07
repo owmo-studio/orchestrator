@@ -87,8 +87,13 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
             client.on('Browser.downloadProgress', async event => {
                 if (guid !== event.guid) return;
                 if (event.state === 'completed') {
-                    fs.renameSync(path.resolve(params.outDir, event.guid), path.resolve(params.outDir, guids[event.guid]));
-                    resolve(guids[event.guid]);
+                    try {
+                        fs.renameSync(path.resolve(params.outDir, event.guid), path.resolve(params.outDir, guids[event.guid]));
+                        resolve(guids[event.guid]);
+                    } catch (err) {
+                        console.log(err);
+                        throw err;
+                    }
                 }
             });
         });
