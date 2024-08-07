@@ -3,7 +3,7 @@ import path from 'path';
 import * as activity from '@temporalio/activity';
 import {addOrUpdateQueryParams, createZipArchive, delay} from '../helpers';
 import {EngineConfig, RenderFrame} from '../interfaces';
-import {PuppeteerBrowser} from '../browser';
+import {PuppeteerBrowser} from '../puppeteer-browser';
 import {logActivity} from '../logging';
 
 interface Params extends RenderFrame {}

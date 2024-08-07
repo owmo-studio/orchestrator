@@ -10,6 +10,9 @@ export class PuppeteerBrowser {
     private browserWSEndpoint!: string;
     private monitoringInterval!: NodeJS.Timeout;
 
+    private connectCount: number = 0;
+    private maxConnects: number = 10;
+
     private constructor() {}
 
     static get instance(): PuppeteerBrowser {
@@ -22,7 +25,6 @@ export class PuppeteerBrowser {
     static async init() {
         if (this.instance.browser) return;
         await this.launchBrowser();
-        this.startMonitoring();
     }
 
     private static async launchBrowser() {
@@ -44,6 +46,8 @@ export class PuppeteerBrowser {
         const {pid} = this.instance.browser.process() ?? {pid: undefined};
         throwIfUndefined(pid);
         this.instance.pid = pid;
+
+        this.startMonitoring();
     }
 
     private static startMonitoring() {
@@ -70,14 +74,24 @@ export class PuppeteerBrowser {
     }
 
     static async getConnectedBrowser() {
+        // Re-launching the browser every N times it's requested
+        if (this.#instance.connectCount >= this.#instance.maxConnects) {
+            await this.shutdown();
+            await this.launchBrowser();
+            this.#instance.connectCount = 0;
+        }
+
+        this.#instance.connectCount++;
         return await puppeteer.connect({browserWSEndpoint: this.instance.browserWSEndpoint});
     }
 
     static async shutdown() {
+        // Stop monitoring
         if (this.instance.monitoringInterval) {
             clearInterval(this.instance.monitoringInterval);
         }
 
+        // Kill the browser PID
         if (this.instance.browser) {
             process.kill(this.instance.pid, 'SIGKILL');
             await this.instance.browser.close();

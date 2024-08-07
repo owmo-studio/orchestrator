@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv';
 import * as activities from './activities';
-import {PuppeteerBrowser} from './browser';
+import {PuppeteerBrowser} from './puppeteer-browser';
 import {Worker, NativeConnection} from '@temporalio/worker';
 import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE} from './constants';
 import {delay} from './helpers';
