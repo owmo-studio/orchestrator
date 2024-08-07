@@ -20,6 +20,21 @@ declare global {
     }
 }
 
+function pad(num: number) {
+    return num < 10 ? '0' + num : num;
+}
+
+async function cleanupPartialDownloads(outDir: string) {
+    const files = fs.readdirSync(outDir);
+    files.forEach(file => {
+        const filePath = path.join(outDir, file);
+        const stats = fs.statSync(filePath);
+        if (stats.size === 0 || file.endsWith('.crdownload')) {
+            fs.unlinkSync(filePath);
+        }
+    });
+}
+
 export async function screenshotCanvasArchiveDownloads(params: Params): Promise<Output> {
     const context = activity.Context.current();
 
@@ -91,6 +106,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
                     }
                 } else if (event.state === 'canceled') {
                     reject('canceled');
+                    console.log('download cancelled, cleaning up partial downloads...');
                 }
             });
         });
@@ -149,6 +165,10 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
 
         await page.goto(URL, {timeout: 0, waitUntil: 'load'});
 
+        await page.waitForSelector('canvas');
+        const canvas = await page.$('canvas');
+        if (!canvas) throw new Error('canvas is null');
+
         await new Promise(resolve => {
             const interval = setInterval(() => {
                 if (messageReceived) {
@@ -162,9 +182,17 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
             }, params.timeout - 1000);
         });
 
-        await page.waitForSelector('canvas');
-        const canvas = await page.$('canvas');
-        if (!canvas) throw new Error('canvas is null');
+        await Promise.all(downloadsInProgress).catch(err => {
+            console.log(err);
+            throw err;
+        });
+
+        if (downloadsInProgress.length > 0) {
+            const filePaths: Array<string> = [];
+            for (const key of Object.keys(guids)) filePaths.push(path.resolve(params.outDir, guids[key]));
+            await createZipArchive(filePaths, archivePath);
+            await delay(1000);
+        }
 
         await page.screenshot({
             path: filepath,
@@ -176,22 +204,14 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
             },
         });
 
-        await Promise.all(downloadsInProgress);
-
-        if (downloadsInProgress.length > 0) {
-            const filePaths: Array<string> = [];
-            for (const key of Object.keys(guids)) filePaths.push(path.resolve(params.outDir, guids[key]));
-            await createZipArchive(filePaths, archivePath);
-            await delay(1000);
-        }
-
         await page.close();
     } catch (err) {
-        console.error(err);
+        console.log(err);
         throw err;
     } finally {
         await client.detach();
         await browser.disconnect();
+        await cleanupPartialDownloads(params.outDir);
     }
 
     const endTime: Date = new Date();
@@ -202,10 +222,6 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
     const remainingSeconds = seconds % 60;
-
-    function pad(num: number) {
-        return num < 10 ? '0' + num : num;
-    }
 
     const result = {
         screenshot: filepath,
