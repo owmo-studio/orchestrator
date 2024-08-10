@@ -16,7 +16,7 @@ const {createFsDirectory} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
 });
 
-const {screenshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
+const {snapshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
     startToCloseTimeout: '24 hours',
 });
 
@@ -33,7 +33,7 @@ export async function renderFrames(params: Params): Promise<void> {
 
     await Promise.all(
         params.seeds.map(seed => {
-            return screenshotCanvasArchiveDownloads({
+            return snapshotCanvasArchiveDownloads({
                 uuid: params.uuid,
                 seed,
                 url: params.url,

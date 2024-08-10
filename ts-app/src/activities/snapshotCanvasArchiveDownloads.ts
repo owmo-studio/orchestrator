@@ -24,13 +24,13 @@ function pad(num: number) {
     return num < 10 ? '0' + num : num;
 }
 
-export async function screenshotCanvasArchiveDownloads(params: Params): Promise<Output> {
+export async function snapshotCanvasArchiveDownloads(params: Params): Promise<Output> {
     const context = activity.Context.current();
 
     logActivity({
         context,
         type: 'info',
-        label: 'screenshotCanvasArchiveDownloads',
+        label: 'snapshotCanvasArchiveDownloads',
         status: 'INVOKED',
         data: params,
     });
@@ -125,7 +125,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
             logActivity({
                 context,
                 type: 'error',
-                label: 'screenshotCanvasArchiveDownloads',
+                label: 'snapshotCanvasArchiveDownloads',
                 status: 'ERROR',
                 message: `${error.message}`,
                 data: error,
@@ -136,7 +136,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
             logActivity({
                 context,
                 type: 'info',
-                label: 'screenshotCanvasArchiveDownloads',
+                label: 'snapshotCanvasArchiveDownloads',
                 status: 'CONSOLE',
                 message: `${message.text()}`,
             });
@@ -151,10 +151,6 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
         });
 
         await page.goto(URL, {timeout: 0, waitUntil: 'load'});
-
-        await page.waitForSelector('canvas');
-        const canvas = await page.$('canvas');
-        if (!canvas) throw new Error('canvas is null');
 
         await new Promise(resolve => {
             const interval = setInterval(() => {
@@ -181,15 +177,13 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
             await delay(1000);
         }
 
-        await page.screenshot({
-            path: filepath,
-            clip: {
-                x: 0,
-                y: 0,
-                width: params.width,
-                height: params.height,
-            },
+        const canvasData = await page.evaluate(() => {
+            const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+            return canvas.toDataURL('image/png');
         });
+
+        const canvasDataBuffer = Buffer.from(canvasData.split(',')[1], 'base64');
+        fs.writeFileSync(filepath, canvasDataBuffer);
 
         await page.close();
     } catch (err) {
@@ -218,7 +212,7 @@ export async function screenshotCanvasArchiveDownloads(params: Params): Promise<
     logActivity({
         context,
         type: 'info',
-        label: 'screenshotCanvasArchiveDownloads',
+        label: 'snapshotCanvasArchiveDownloads',
         status: 'COMPLETED',
         data: result,
     });

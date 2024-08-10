@@ -16,7 +16,7 @@ const {makeArrayOfHashes, createFsDirectory} = proxyActivities<typeof activities
     startToCloseTimeout: '1 minute',
 });
 
-const {screenshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
+const {snapshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
     startToCloseTimeout: '24 hours',
 });
 
@@ -37,7 +37,7 @@ export async function exploreSeeds(params: Params): Promise<void> {
 
     await Promise.all(
         hashes.map(hash => {
-            return screenshotCanvasArchiveDownloads({
+            return snapshotCanvasArchiveDownloads({
                 uuid: params.uuid,
                 seed: hash,
                 url: params.url,

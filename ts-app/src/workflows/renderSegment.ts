@@ -13,14 +13,14 @@ interface Params {
     segment: Segment;
 }
 
-const {screenshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
+const {snapshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
     startToCloseTimeout: '24 hours',
 });
 
 export async function renderSegment(params: Params): Promise<void> {
     await Promise.all(
         params.segment.frames.map(frame => {
-            return screenshotCanvasArchiveDownloads({
+            return snapshotCanvasArchiveDownloads({
                 uuid: params.uuid,
                 seed: params.seed,
                 url: params.url,
