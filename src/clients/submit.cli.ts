@@ -84,7 +84,7 @@ async function run() {
 
     params['outDir'] = await input({
         message: 'Output directory path:',
-        default: isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', '..', 'out')}`,
+        default: isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', 'out')}`,
         validate: path => doesDirectoryExist(path),
     });
 

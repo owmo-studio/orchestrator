@@ -17,10 +17,7 @@ async function run() {
         activities,
         taskQueue: TASK_QUEUE_RENDERS,
         workflowsPath: require.resolve('../workflows'),
-        maxConcurrentWorkflowTaskExecutions: 1,
         maxConcurrentActivityTaskExecutions: 1,
-        shutdownGraceTime: 0,
-        shutdownForceTime: 1000,
     });
 
     await PuppeteerBrowser.init();
