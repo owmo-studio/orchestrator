@@ -3,12 +3,11 @@
     "version": "0.4.0",
     "private": true,
     "scripts": {
-        "worker": "ts-node src/worker.ts",
-        "submit": "ts-node src/clients/submit.ts",
+        "submit": "ts-node src/clients/submit.cli.ts",
         "temporal": "temporal server start-dev --ui-port 8080",
-        "build": "tsc --build",
-        "worker.prod": "NODE_ENV=production ts-node src/worker.ts",
-        "submit.prod": "NODE_ENV=production ts-node src/clients/submit.ts",
+        "worker.render": "ts-node src/workers/worker.render.ts",
+        "worker.render.prod": "NODE_ENV=production ts-node src/workers/worker.render.ts",
+        "submit.prod": "NODE_ENV=production ts-node src/clients/submit.cli.ts",
         "clean": "rm -rf ./lib & rm -rf ../out/*"
     },
     "nodemonConfig": {

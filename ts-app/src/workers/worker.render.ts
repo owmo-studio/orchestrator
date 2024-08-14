@@ -1,9 +1,9 @@
 import * as dotenv from 'dotenv';
-import * as activities from './activities';
-import {PuppeteerBrowser} from './puppeteer-browser';
+import * as activities from '../activities';
+import {PuppeteerBrowser} from '../puppeteer-browser';
 import {Worker, NativeConnection} from '@temporalio/worker';
-import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE} from './constants';
-import {delay} from './helpers';
+import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE_RENDERS} from '../constants';
+import {delay} from '../helpers';
 
 dotenv.config();
 
@@ -15,8 +15,8 @@ async function run() {
     const worker = await Worker.create({
         connection,
         activities,
-        taskQueue: TASK_QUEUE,
-        workflowsPath: require.resolve('./workflows'),
+        taskQueue: TASK_QUEUE_RENDERS,
+        workflowsPath: require.resolve('../workflows'),
         maxConcurrentWorkflowTaskExecutions: 1,
         maxConcurrentActivityTaskExecutions: 1,
         shutdownGraceTime: 0,
