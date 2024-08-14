@@ -1,7 +1,7 @@
 import * as activity from '@temporalio/activity';
 import seedrandom from 'seedrandom';
-import {makeHashStringUsingPRNG} from '../helpers';
-import {logActivity} from '../logging';
+import {makeHashStringUsingPRNG} from '../common/helpers';
+import {logActivity} from '../common/logging';
 
 interface Params {
     uuid: string;

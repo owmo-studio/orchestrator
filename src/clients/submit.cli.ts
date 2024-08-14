@@ -5,7 +5,7 @@ import {input, number, select, confirm} from '@inquirer/prompts';
 import {Connection, Client} from '@temporalio/client';
 import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE_RENDERS} from '../constants';
 import {exploreSeeds, renderFrames, renderSequences} from '../workflows';
-import {doesDirectoryExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../helpers';
+import {doesDirectoryExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../common/helpers';
 import seedrandom from 'seedrandom';
 
 dotenv.config();

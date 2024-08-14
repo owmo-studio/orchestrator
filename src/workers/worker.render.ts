@@ -3,7 +3,7 @@ import * as activities from '../activities';
 import {BrowserManager} from '../managers/browser.manager';
 import {Worker, NativeConnection} from '@temporalio/worker';
 import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE_RENDERS} from '../constants';
-import {delay} from '../helpers';
+import {delay} from '../common/helpers';
 
 dotenv.config();
 

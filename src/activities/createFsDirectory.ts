@@ -1,5 +1,5 @@
 import * as activity from '@temporalio/activity';
-import {logActivity} from '../logging';
+import {logActivity} from '../common/logging';
 import fs from 'fs';
 
 interface Params {

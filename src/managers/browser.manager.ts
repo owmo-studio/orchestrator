@@ -1,5 +1,5 @@
 import puppeteer, {Browser} from 'puppeteer';
-import {delay, throwIfUndefined} from '../helpers';
+import {delay, throwIfUndefined} from '../common/helpers';
 import ps from 'ps-node';
 
 export class BrowserManager {

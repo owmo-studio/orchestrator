@@ -1,10 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import * as activity from '@temporalio/activity';
-import {addOrUpdateQueryParams, createZipArchive, delay} from '../helpers';
+import {addOrUpdateQueryParams, createZipArchive, delay} from '../common/helpers';
 import {EngineConfig, RenderFrame} from '../interfaces';
 import {BrowserManager} from '../managers/browser.manager';
-import {logActivity} from '../logging';
+import {logActivity} from '../common/logging';
 
 interface Params extends RenderFrame {}
 
