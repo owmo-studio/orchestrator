@@ -7,6 +7,8 @@
         "temporal": "temporal server start-dev --ui-port 8080",
         "worker.render": "ts-node src/workers/worker.render.ts",
         "worker.render.prod": "NODE_ENV=production ts-node src/workers/worker.render.ts",
+        "worker.script": "ts-node src/workers/worker.script.ts",
+        "worker.script.prod": "NODE_ENV=production ts-node src/workers/worker.script.ts",
         "submit.prod": "NODE_ENV=production ts-node src/clients/submit.cli.ts",
         "clean": "rm -rf ./lib & rm -rf ./out/*"
     },

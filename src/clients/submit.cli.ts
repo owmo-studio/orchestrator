@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 import {v4 as uuidv4} from 'uuid';
 import {input, number, select, confirm} from '@inquirer/prompts';
 import {Connection, Client} from '@temporalio/client';
-import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE_RENDERS} from '../constants';
+import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE_RENDER} from '../constants';
 import {exploreSeeds, renderFrames, renderSequences} from '../workflows';
 import {doesDirectoryExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../common/helpers';
 import seedrandom from 'seedrandom';
@@ -215,7 +215,7 @@ async function run() {
                         mkDir: params.mkDirName,
                     },
                 ],
-                taskQueue: TASK_QUEUE_RENDERS,
+                taskQueue: TASK_QUEUE_RENDER,
                 workflowId: uuid,
             });
             break;
@@ -238,7 +238,7 @@ async function run() {
                         mkDir: params.mkDirName,
                     },
                 ],
-                taskQueue: TASK_QUEUE_RENDERS,
+                taskQueue: TASK_QUEUE_RENDER,
                 workflowId: uuid,
             });
             break;
@@ -256,7 +256,7 @@ async function run() {
                         mkDir: params.mkDirName,
                     },
                 ],
-                taskQueue: TASK_QUEUE_RENDERS,
+                taskQueue: TASK_QUEUE_RENDER,
                 workflowId: uuid,
             });
             break;
