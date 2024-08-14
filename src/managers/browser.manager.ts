@@ -1,9 +1,9 @@
 import puppeteer, {Browser} from 'puppeteer';
-import {delay, throwIfUndefined} from './helpers';
+import {delay, throwIfUndefined} from '../helpers';
 import ps from 'ps-node';
 
-export class PuppeteerBrowser {
-    static #instance: PuppeteerBrowser;
+export class BrowserManager {
+    static #instance: BrowserManager;
 
     private pid!: number;
     private browser!: Browser | null;
@@ -15,11 +15,11 @@ export class PuppeteerBrowser {
 
     private constructor() {}
 
-    static get instance(): PuppeteerBrowser {
-        if (!PuppeteerBrowser.#instance) {
-            PuppeteerBrowser.#instance = new PuppeteerBrowser();
+    static get instance(): BrowserManager {
+        if (!BrowserManager.#instance) {
+            BrowserManager.#instance = new BrowserManager();
         }
-        return PuppeteerBrowser.#instance;
+        return BrowserManager.#instance;
     }
 
     static async init() {
@@ -55,7 +55,7 @@ export class PuppeteerBrowser {
         this.instance.monitoringInterval = setInterval(async () => {
             if (!(await this.isProcessRunning(this.instance.pid))) {
                 console.warn(`Puppeteer process with PID ${this.instance.pid} is not running. Restarting...`);
-                await PuppeteerBrowser.launchBrowser();
+                await BrowserManager.launchBrowser();
             }
         }, 5000);
     }

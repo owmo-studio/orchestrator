@@ -3,7 +3,7 @@ import path from 'path';
 import * as activity from '@temporalio/activity';
 import {addOrUpdateQueryParams, createZipArchive, delay} from '../helpers';
 import {EngineConfig, RenderFrame} from '../interfaces';
-import {PuppeteerBrowser} from '../puppeteer-browser';
+import {BrowserManager} from '../managers/browser.manager';
 import {logActivity} from '../logging';
 
 interface Params extends RenderFrame {}
@@ -64,7 +64,7 @@ export async function snapshotCanvasArchiveDownloads(params: Params): Promise<Ou
 
     const filepath = `${params.outDir}/${params.seed}.${extension('png')}`;
 
-    const browser = await PuppeteerBrowser.getConnectedBrowser();
+    const browser = await BrowserManager.getConnectedBrowser();
 
     const client = await browser.target().createCDPSession();
 

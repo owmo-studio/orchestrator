@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv';
 import * as activities from '../activities';
-import {PuppeteerBrowser} from '../puppeteer-browser';
+import {BrowserManager} from '../managers/browser.manager';
 import {Worker, NativeConnection} from '@temporalio/worker';
 import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE_RENDERS} from '../constants';
 import {delay} from '../helpers';
@@ -20,10 +20,10 @@ async function run() {
         maxConcurrentActivityTaskExecutions: 1,
     });
 
-    await PuppeteerBrowser.init();
+    await BrowserManager.init();
 
     const shutdown = async () => {
-        await PuppeteerBrowser.shutdown();
+        await BrowserManager.shutdown();
         await delay(1000);
         process.exit(0);
     };
