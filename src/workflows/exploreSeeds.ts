@@ -1,5 +1,7 @@
 import {proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
+import {EventExecScripts} from './eventExecScripts';
+import {ScriptConfig} from '../interfaces';
 
 interface Params {
     uuid: string;
@@ -10,6 +12,7 @@ interface Params {
     timeout: number;
     count: number;
     mkDir?: string;
+    scriptConfig?: ScriptConfig;
 }
 
 const {getArrayOfHashes, makeFsDirectory} = proxyActivities<typeof activities>({
@@ -21,6 +24,10 @@ const {snapshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
 });
 
 export async function exploreSeeds(params: Params): Promise<void> {
+    const {scriptConfig} = params;
+
+    await EventExecScripts.Workflow.Pre({scriptConfig, execPath: params.outDir});
+
     const {hashes} = await getArrayOfHashes({
         uuid: params.uuid,
         count: params.count,
@@ -54,4 +61,6 @@ export async function exploreSeeds(params: Params): Promise<void> {
             });
         }),
     );
+
+    await EventExecScripts.Workflow.Post({scriptConfig, execPath: params.outDir});
 }

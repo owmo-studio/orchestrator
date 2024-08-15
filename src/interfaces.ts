@@ -49,19 +49,24 @@ export interface Segment {
     fps: number;
 }
 
-export interface ScriptExec {
-    type: 'bash';
-    scriptPath: string;
-    execPath: string;
+export interface Script {
+    path: string;
+    args?: Array<string>;
 }
 
 export interface ScriptConfig {
-    workflow: {
-        pre: Array<ScriptExec> | undefined;
-        post: Array<ScriptExec> | undefined;
+    workflow?: {
+        pre?: Script;
+        post?: Script;
     };
-    activity: {
-        pre: Array<ScriptExec> | undefined;
-        post: Array<ScriptExec> | undefined;
+    activity?: {
+        pre?: Script;
+        post?: Script;
     };
+}
+
+export interface ScriptExec {
+    script: Script;
+    execPath: string;
+    args?: Array<string>;
 }
