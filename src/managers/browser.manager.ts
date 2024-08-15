@@ -34,7 +34,8 @@ export class BrowserManager {
             protocolTimeout: 0,
             handleSIGINT: false,
             handleSIGTERM: false,
-            ignoreHTTPSErrors: true,
+            handleSIGHUP: false,
+            acceptInsecureCerts: true,
         });
 
         this.instance.browserWSEndpoint = this.instance.browser.wsEndpoint();
