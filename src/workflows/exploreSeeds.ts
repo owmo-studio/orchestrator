@@ -12,7 +12,7 @@ interface Params {
     mkDir?: string;
 }
 
-const {makeArrayOfHashes, createFsDirectory} = proxyActivities<typeof activities>({
+const {getArrayOfHashes, makeFsDirectory} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
 });
 
@@ -21,14 +21,14 @@ const {snapshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
 });
 
 export async function exploreSeeds(params: Params): Promise<void> {
-    const {hashes} = await makeArrayOfHashes({
+    const {hashes} = await getArrayOfHashes({
         uuid: params.uuid,
         count: params.count,
     });
 
     let outputDirectory = params.outDir;
     if (params.mkDir) {
-        const {outDir} = await createFsDirectory({
+        const {outDir} = await makeFsDirectory({
             rootPath: params.outDir,
             dirName: params.mkDir,
         });

@@ -6,8 +6,6 @@ import {EngineConfig, RenderFrame} from '../interfaces';
 import {BrowserManager} from '../managers/browser.manager';
 import {logActivity} from '../common/logging';
 
-interface Params extends RenderFrame {}
-
 interface Output {
     timeToRender: string;
     screenshot: string;
@@ -24,7 +22,7 @@ function pad(num: number) {
     return num < 10 ? '0' + num : num;
 }
 
-export async function snapshotCanvasArchiveDownloads(params: Params): Promise<Output> {
+export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promise<Output> {
     const context = activity.Context.current();
 
     logActivity({

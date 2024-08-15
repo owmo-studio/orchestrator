@@ -16,7 +16,7 @@ interface Params {
     mkDir?: string;
 }
 
-const {createFsDirectory} = proxyActivities<typeof activities>({
+const {makeFsDirectory} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
 });
 
@@ -24,7 +24,7 @@ export async function renderSequences(params: Params): Promise<void> {
     let outputDirectory = params.outDir;
 
     if (params.mkDir) {
-        const {outDir} = await createFsDirectory({
+        const {outDir} = await makeFsDirectory({
             rootPath: params.outDir,
             dirName: params.mkDir,
         });

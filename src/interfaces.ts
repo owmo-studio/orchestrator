@@ -48,3 +48,20 @@ export interface Segment {
     padding: number;
     fps: number;
 }
+
+export interface ScriptExec {
+    type: 'bash';
+    scriptPath: string;
+    execPath: string;
+}
+
+export interface ScriptConfig {
+    workflow: {
+        pre: Array<ScriptExec> | undefined;
+        post: Array<ScriptExec> | undefined;
+    };
+    activity: {
+        pre: Array<ScriptExec> | undefined;
+        post: Array<ScriptExec> | undefined;
+    };
+}
