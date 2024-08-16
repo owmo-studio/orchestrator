@@ -46,7 +46,7 @@ export async function exploreSeeds(params: Params): Promise<void> {
         hashes.map(hash => {
             return Promise.all([
                 // Pre
-                EventScript.Activity.Pre(scriptsParams),
+                EventScript.Activity.Pre({...scriptsParams, args: [`${hash}`]}),
 
                 // Snapshot
                 snapshotCanvasArchiveDownloads({
