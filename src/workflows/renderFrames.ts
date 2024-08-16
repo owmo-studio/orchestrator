@@ -36,13 +36,13 @@ export async function renderFrames(params: Params): Promise<void> {
 
     const scriptParams = {scriptConfig: params.scriptConfig, execPath: outputDirectory};
 
-    await EventScript.Workflow.Pre(scriptParams);
+    await EventScript.Work.Pre(scriptParams);
 
     await Promise.all(
         params.seeds.map(seed => {
             return Promise.all([
                 //Pre
-                EventScript.Activity.Pre({...scriptParams, args: [`${seed}`]}),
+                EventScript.Frame.Pre({...scriptParams, args: [`${seed}`]}),
 
                 // Snapshot
                 snapshotCanvasArchiveDownloads({
@@ -62,10 +62,10 @@ export async function renderFrames(params: Params): Promise<void> {
                 }),
 
                 // Post
-                EventScript.Activity.Post({...scriptParams, args: [`${seed}`]}),
+                EventScript.Frame.Post({...scriptParams, args: [`${seed}`]}),
             ]);
         }),
     );
 
-    await EventScript.Workflow.Post(scriptParams);
+    await EventScript.Work.Post(scriptParams);
 }

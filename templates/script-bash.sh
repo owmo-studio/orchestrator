@@ -24,5 +24,5 @@ fi
 ARGUMENTS=("$@")
 
 for i in "${!ARGUMENTS[@]}"; do
-    echo "Argument $i: ${ARGUMENTS[$i]}"
+    echo "ARG $i: ${ARGUMENTS[$i]}"
 done

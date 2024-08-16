@@ -15,7 +15,7 @@ interface EventExecScriptParams {
 }
 
 interface RunParams extends EventExecScriptParams {
-    event: 'workflow' | 'activity';
+    event: 'work' | 'sequence' | 'frame';
     when: 'pre' | 'post';
 }
 
@@ -28,7 +28,7 @@ async function run({scriptConfig, execPath, args, event, when}: RunParams) {
     const ARGS: Array<string> = [...(script.args ?? []), ...(args ?? [])];
 
     await executeScript({
-        label: `${event}-${when}`,
+        label: `EventScript::${event}-${when}`,
         script,
         execPath,
         args: ARGS,
@@ -36,20 +36,28 @@ async function run({scriptConfig, execPath, args, event, when}: RunParams) {
 }
 
 export const EventScript = {
-    Workflow: {
+    Work: {
         Pre: async (params: EventExecScriptParams) => {
-            await run({...params, event: 'workflow', when: 'pre'});
+            await run({...params, event: 'work', when: 'pre'});
         },
         Post: async (params: EventExecScriptParams) => {
-            await run({...params, event: 'workflow', when: 'post'});
+            await run({...params, event: 'work', when: 'post'});
         },
     },
-    Activity: {
+    Sequence: {
         Pre: async (params: EventExecScriptParams) => {
-            await run({...params, event: 'activity', when: 'pre'});
+            await run({...params, event: 'sequence', when: 'pre'});
         },
         Post: async (params: EventExecScriptParams) => {
-            await run({...params, event: 'activity', when: 'post'});
+            await run({...params, event: 'sequence', when: 'post'});
+        },
+    },
+    Frame: {
+        Pre: async (params: EventExecScriptParams) => {
+            await run({...params, event: 'frame', when: 'pre'});
+        },
+        Post: async (params: EventExecScriptParams) => {
+            await run({...params, event: 'frame', when: 'post'});
         },
     },
 };

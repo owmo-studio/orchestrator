@@ -1,8 +1,9 @@
 import {proxyActivities} from '@temporalio/workflow';
 import {executeChild} from '@temporalio/workflow';
 import * as activities from '../activities';
-import {Sequence, Segment} from '../interfaces';
+import {Sequence, Segment, ScriptConfig} from '../interfaces';
 import {MAX_CHILD_FRAMES} from '../constants';
+import {EventScript} from '../common/eventScript';
 
 interface Params {
     uuid: string;
@@ -14,6 +15,7 @@ interface Params {
     seeds: Array<string>;
     sequence: Sequence;
     mkDir?: string;
+    scriptConfig?: ScriptConfig;
 }
 
 const {makeFsDirectory} = proxyActivities<typeof activities>({
@@ -52,27 +54,43 @@ export async function renderSequences(params: Params): Promise<void> {
         chunk++;
     }
 
+    const scriptParams = {scriptConfig: params.scriptConfig, execPath: outputDirectory};
+
+    await EventScript.Work.Pre(scriptParams);
+
     await Promise.all(
         params.seeds.map(async (seed, seedIndex) => {
-            return Promise.all(
-                segmentsToRender.map(segment => {
-                    return executeChild('renderSegment', {
-                        args: [
-                            {
-                                uuid: params.uuid,
-                                url: params.url,
-                                seed,
-                                width: params.width,
-                                height: params.height,
-                                outDir: outputDirectory,
-                                timeout: params.timeout,
-                                segment,
-                            },
-                        ],
-                        workflowId: `${params.uuid}_s[${seedIndex}]_c[${segment.chunk}]`,
-                    });
-                }),
-            );
+            return Promise.all([
+                // Pre
+                EventScript.Sequence.Pre({...scriptParams, args: [`${seed}`]}),
+
+                // Segments
+                Promise.all(
+                    segmentsToRender.map(segment => {
+                        return executeChild('renderSegment', {
+                            args: [
+                                {
+                                    uuid: params.uuid,
+                                    url: params.url,
+                                    seed,
+                                    width: params.width,
+                                    height: params.height,
+                                    outDir: outputDirectory,
+                                    timeout: params.timeout,
+                                    segment,
+                                    scriptConfig: params.scriptConfig,
+                                },
+                            ],
+                            workflowId: `${params.uuid}_s[${seedIndex}]_c[${segment.chunk}]`,
+                        });
+                    }),
+                ),
+
+                // Post
+                EventScript.Sequence.Post({...scriptParams, args: [`${seed}`]}),
+            ]);
         }),
     );
+
+    await EventScript.Work.Post(scriptParams);
 }

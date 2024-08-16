@@ -55,11 +55,15 @@ export interface Script {
 }
 
 export interface ScriptConfig {
-    workflow?: {
+    work?: {
         pre?: Script;
         post?: Script;
     };
-    activity?: {
+    sequence?: {
+        pre?: Script;
+        post?: Script;
+    };
+    frame?: {
         pre?: Script;
         post?: Script;
     };
