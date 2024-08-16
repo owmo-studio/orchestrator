@@ -24,9 +24,11 @@ export async function renderSegment(params: Params): Promise<void> {
 
     await Promise.all(
         params.segment.frames.map(frame => {
+            const paddedFrame = String(frame).padStart(params.segment.padding, '0');
+
             return Promise.all([
                 // Pre
-                EventScript.Frame.Pre({...scriptParams, args: [`${params.seed}`, `${frame}`]}),
+                EventScript.Frame.Pre({...scriptParams, args: [`${params.seed}`, `${paddedFrame}`]}),
 
                 // Snapshot
                 snapshotCanvasArchiveDownloads({
@@ -46,7 +48,7 @@ export async function renderSegment(params: Params): Promise<void> {
                 }),
 
                 // Post
-                EventScript.Frame.Post({...scriptParams, args: [`${params.seed}`, `${frame}`]}),
+                EventScript.Frame.Post({...scriptParams, args: [`${params.seed}`, `${paddedFrame}`]}),
             ]);
         }),
     );
