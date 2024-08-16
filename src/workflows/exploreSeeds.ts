@@ -1,6 +1,6 @@
 import {proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
-import {EventExecScripts} from './eventExecScripts';
+import {EventScript} from '../common/eventScript';
 import {ScriptConfig} from '../interfaces';
 
 interface Params {
@@ -24,10 +24,6 @@ const {snapshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
 });
 
 export async function exploreSeeds(params: Params): Promise<void> {
-    const {scriptConfig} = params;
-
-    await EventExecScripts.Workflow.Pre({scriptConfig, execPath: params.outDir});
-
     const {hashes} = await getArrayOfHashes({
         uuid: params.uuid,
         count: params.count,
@@ -42,25 +38,38 @@ export async function exploreSeeds(params: Params): Promise<void> {
         outputDirectory = outDir;
     }
 
+    const scriptsParams = {scriptConfig: params.scriptConfig, execPath: outputDirectory};
+
+    await EventScript.Workflow.Pre(scriptsParams);
+
     await Promise.all(
         hashes.map(hash => {
-            return snapshotCanvasArchiveDownloads({
-                uuid: params.uuid,
-                seed: hash,
-                url: params.url,
-                width: params.width,
-                height: params.height,
-                outDir: outputDirectory,
-                timeout: params.timeout,
-                frame: {
-                    fps: 1,
-                    index: 0,
-                    padding: 0,
-                    isPadded: false,
-                },
-            });
+            return Promise.all([
+                // Pre
+                EventScript.Activity.Pre(scriptsParams),
+
+                // Snapshot
+                snapshotCanvasArchiveDownloads({
+                    uuid: params.uuid,
+                    seed: hash,
+                    url: params.url,
+                    width: params.width,
+                    height: params.height,
+                    outDir: outputDirectory,
+                    timeout: params.timeout,
+                    frame: {
+                        fps: 1,
+                        index: 0,
+                        padding: 0,
+                        isPadded: false,
+                    },
+                }),
+
+                // Post
+                EventScript.Activity.Post({...scriptsParams, args: [`${hash}`]}),
+            ]);
         }),
     );
 
-    await EventExecScripts.Workflow.Post({scriptConfig, execPath: params.outDir});
+    await EventScript.Workflow.Post(scriptsParams);
 }

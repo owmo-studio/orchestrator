@@ -21,8 +21,6 @@ if [ ! -d "$EXECPATH" ]; then
     exit 1
 fi
 
-echo "EXECPATH: $EXECPATH"
-
 ARGUMENTS=("$@")
 
 for i in "${!ARGUMENTS[@]}"; do

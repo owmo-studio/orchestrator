@@ -28,19 +28,28 @@ async function run({scriptConfig, execPath, args, event, when}: RunParams) {
     const ARGS: Array<string> = [...(script.args ?? []), ...(args ?? [])];
 
     await executeScript({
+        label: `${event}-${when}`,
         script,
         execPath,
         args: ARGS,
     });
 }
 
-export const EventExecScripts = {
+export const EventScript = {
     Workflow: {
         Pre: async (params: EventExecScriptParams) => {
             await run({...params, event: 'workflow', when: 'pre'});
         },
         Post: async (params: EventExecScriptParams) => {
             await run({...params, event: 'workflow', when: 'post'});
+        },
+    },
+    Activity: {
+        Pre: async (params: EventExecScriptParams) => {
+            await run({...params, event: 'activity', when: 'pre'});
+        },
+        Post: async (params: EventExecScriptParams) => {
+            await run({...params, event: 'activity', when: 'post'});
         },
     },
 };

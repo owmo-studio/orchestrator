@@ -13,6 +13,7 @@ export async function executeScript(params: ScriptExec): Promise<void> {
         type: 'info',
         label: 'executeScript',
         status: 'INVOKED',
+        message: params.label,
         data: params,
     });
 
@@ -38,7 +39,17 @@ export async function executeScript(params: ScriptExec): Promise<void> {
 
     try {
         await new Promise<void>((resolve, reject) => {
-            const process = spawn('bash', [params.script.path, params.execPath, ...(params.args ?? [])], {stdio: ['inherit', 'inherit', 'pipe']});
+            const process = spawn('bash', [params.script.path, params.execPath, ...(params.args ?? [])], {stdio: ['inherit', 'pipe', 'pipe']});
+
+            process.stdout.on('data', data => {
+                logActivity({
+                    context,
+                    type: 'info',
+                    label: 'executeScript',
+                    status: 'CONSOLE',
+                    message: data.toString(),
+                });
+            });
 
             let errorOutput: string = '';
             process.stderr.on('data', data => {
@@ -57,4 +68,11 @@ export async function executeScript(params: ScriptExec): Promise<void> {
         console.log(err);
         throw err;
     }
+
+    logActivity({
+        context,
+        type: 'info',
+        label: 'executeScript',
+        status: 'COMPLETED',
+    });
 }

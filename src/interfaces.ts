@@ -66,6 +66,7 @@ export interface ScriptConfig {
 }
 
 export interface ScriptExec {
+    label: string;
     script: Script;
     execPath: string;
     args?: Array<string>;
