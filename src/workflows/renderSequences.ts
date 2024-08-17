@@ -60,35 +60,28 @@ export async function renderSequences(params: Params): Promise<void> {
 
     await Promise.all(
         params.seeds.map(async (seed, seedIndex) => {
-            return Promise.all([
-                // Pre
-                EventScript.Sequence.Pre({...scriptParams, args: [`${seed}`]}),
-
-                // Segments
-                Promise.all(
-                    segmentsToRender.map(segment => {
-                        return executeChild('renderSegment', {
-                            args: [
-                                {
-                                    uuid: params.uuid,
-                                    url: params.url,
-                                    seed,
-                                    width: params.width,
-                                    height: params.height,
-                                    outDir: outputDirectory,
-                                    timeout: params.timeout,
-                                    segment,
-                                    scriptConfig: params.scriptConfig,
-                                },
-                            ],
-                            workflowId: `${params.uuid}_s[${seedIndex}]_c[${segment.chunk}]`,
-                        });
-                    }),
-                ),
-
-                // Post
-                EventScript.Sequence.Post({...scriptParams, args: [`${seed}`]}),
-            ]);
+            await EventScript.Sequence.Pre({...scriptParams, args: [`${seed}`]});
+            await Promise.all(
+                segmentsToRender.map(segment => {
+                    return executeChild('renderSegment', {
+                        args: [
+                            {
+                                uuid: params.uuid,
+                                url: params.url,
+                                seed,
+                                width: params.width,
+                                height: params.height,
+                                outDir: outputDirectory,
+                                timeout: params.timeout,
+                                segment,
+                                scriptConfig: params.scriptConfig,
+                            },
+                        ],
+                        workflowId: `${params.uuid}_s[${seedIndex}]_c[${segment.chunk}]`,
+                    });
+                }),
+            );
+            await EventScript.Sequence.Post({...scriptParams, args: [`${seed}`, `${params.sequence.padding}`]});
         }),
     );
 

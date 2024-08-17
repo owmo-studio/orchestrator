@@ -36,18 +36,35 @@ async function run({scriptConfig, execPath, args, event, when}: RunParams) {
 }
 
 export function isValidScriptConfig(config: {[key: string]: any}) {
-    if (typeof config !== 'object') return false;
+    if (typeof config !== 'object') {
+        console.error('Config is not an Object');
+        return false;
+    }
     for (const event of ['work', 'sequence', 'frame']) {
         const c = config[event];
         if (c) {
             for (const when of ['pre', 'post']) {
-                if (!(when in c)) return false;
-                if (!c[when].path) return false;
-                if (typeof c[when].path !== 'string') return false;
-                if (c[when].args) {
-                    if (!Array.isArray(c[when].args)) return false;
-                    for (const arg of c[when].args) {
-                        if (typeof arg !== 'string') return false;
+                const p = c[when];
+                if (p) {
+                    if (!p.path) {
+                        console.error(`${when} does not contain a 'path'`);
+                        return false;
+                    }
+                    if (typeof p.path !== 'string') {
+                        console.error(`${when} path is not a String`);
+                        return false;
+                    }
+                    if (p.args) {
+                        if (!Array.isArray(p.args)) {
+                            console.error(`${when} 'args' is not an Array`);
+                            return false;
+                        }
+                        for (const arg of p.args) {
+                            if (typeof arg !== 'string') {
+                                console.error(`${when} argument ${arg} is not a String`);
+                                return false;
+                            }
+                        }
                     }
                 }
             }

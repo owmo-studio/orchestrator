@@ -43,31 +43,24 @@ export async function exploreSeeds(params: Params): Promise<void> {
     await EventScript.Work.Pre(scriptsParams);
 
     await Promise.all(
-        hashes.map(seed => {
-            return Promise.all([
-                // Pre
-                EventScript.Frame.Pre({...scriptsParams, args: [`${seed}`]}),
-
-                // Snapshot
-                snapshotCanvasArchiveDownloads({
-                    uuid: params.uuid,
-                    seed,
-                    url: params.url,
-                    width: params.width,
-                    height: params.height,
-                    outDir: outputDirectory,
-                    timeout: params.timeout,
-                    frame: {
-                        fps: 1,
-                        index: 0,
-                        padding: 0,
-                        isPadded: false,
-                    },
-                }),
-
-                // Post
-                EventScript.Frame.Post({...scriptsParams, args: [`${seed}`]}),
-            ]);
+        hashes.map(async seed => {
+            await EventScript.Frame.Pre({...scriptsParams, args: [`${seed}`]});
+            await snapshotCanvasArchiveDownloads({
+                uuid: params.uuid,
+                seed,
+                url: params.url,
+                width: params.width,
+                height: params.height,
+                outDir: outputDirectory,
+                timeout: params.timeout,
+                frame: {
+                    fps: 1,
+                    index: 0,
+                    padding: 0,
+                    isPadded: false,
+                },
+            });
+            await EventScript.Frame.Post({...scriptsParams, args: [`${seed}`]});
         }),
     );
 

@@ -39,31 +39,24 @@ export async function renderFrames(params: Params): Promise<void> {
     await EventScript.Work.Pre(scriptParams);
 
     await Promise.all(
-        params.seeds.map(seed => {
-            return Promise.all([
-                //Pre
-                EventScript.Frame.Pre({...scriptParams, args: [`${seed}`]}),
-
-                // Snapshot
-                snapshotCanvasArchiveDownloads({
-                    uuid: params.uuid,
-                    seed,
-                    url: params.url,
-                    width: params.width,
-                    height: params.height,
-                    outDir: outputDirectory,
-                    timeout: params.timeout,
-                    frame: {
-                        fps: 1,
-                        index: 0,
-                        padding: 0,
-                        isPadded: false,
-                    },
-                }),
-
-                // Post
-                EventScript.Frame.Post({...scriptParams, args: [`${seed}`]}),
-            ]);
+        params.seeds.map(async seed => {
+            await EventScript.Frame.Pre({...scriptParams, args: [`${seed}`]});
+            await snapshotCanvasArchiveDownloads({
+                uuid: params.uuid,
+                seed,
+                url: params.url,
+                width: params.width,
+                height: params.height,
+                outDir: outputDirectory,
+                timeout: params.timeout,
+                frame: {
+                    fps: 1,
+                    index: 0,
+                    padding: 0,
+                    isPadded: false,
+                },
+            });
+            await EventScript.Frame.Post({...scriptParams, args: [`${seed}`]});
         }),
     );
 
