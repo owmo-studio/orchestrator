@@ -60,7 +60,7 @@ export async function renderSequences(params: Params): Promise<void> {
 
     await Promise.all(
         params.seeds.map(async (seed, seedIndex) => {
-            await EventScript.Sequence.Pre({...scriptParams, args: [`${seed}`]});
+            await EventScript.Sequence.Pre({...scriptParams, args: [`${seed}`, `${params.sequence.padding}`, `${params.sequence.fps}`]});
             await Promise.all(
                 segmentsToRender.map(segment => {
                     return executeChild('renderSegment', {
@@ -81,7 +81,7 @@ export async function renderSequences(params: Params): Promise<void> {
                     });
                 }),
             );
-            await EventScript.Sequence.Post({...scriptParams, args: [`${seed}`, `${params.sequence.padding}`]});
+            await EventScript.Sequence.Post({...scriptParams, args: [`${seed}`, `${params.sequence.padding}`, `${params.sequence.fps}`]});
         }),
     );
 

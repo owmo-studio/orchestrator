@@ -154,7 +154,8 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
             const interval = setInterval(() => {
                 if (messageReceived) {
                     clearInterval(interval);
-                    resolve('done');
+                    const waitToResolve = downloadsInProgress.length > 0 ? 1000 : 0;
+                    setTimeout(() => resolve('done'), waitToResolve);
                 }
             }, 100);
             setTimeout(() => {
