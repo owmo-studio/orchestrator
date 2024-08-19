@@ -2,8 +2,9 @@ import * as dotenv from 'dotenv';
 import * as activities from '../activities';
 import {BrowserManager} from '../managers/browser.manager';
 import {Worker, NativeConnection} from '@temporalio/worker';
-import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE_RENDER} from '../constants';
+import {DEV_TEMPORAL_ADDRESS} from '../constants';
 import {delay} from '../common/helpers';
+import {QueueManager} from '../managers/queue.manager';
 
 dotenv.config();
 
@@ -15,7 +16,7 @@ async function run() {
     const worker = await Worker.create({
         connection,
         activities,
-        taskQueue: TASK_QUEUE_RENDER,
+        taskQueue: QueueManager.render,
         workflowsPath: require.resolve('../workflows'),
         maxConcurrentActivityTaskExecutions: 1,
     });

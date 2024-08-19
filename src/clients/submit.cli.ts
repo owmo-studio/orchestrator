@@ -4,12 +4,13 @@ import * as dotenv from 'dotenv';
 import {v4 as uuidv4} from 'uuid';
 import {input, number, select, confirm} from '@inquirer/prompts';
 import {Connection, Client} from '@temporalio/client';
-import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE_RENDER} from '../constants';
+import {DEV_TEMPORAL_ADDRESS} from '../constants';
 import {exploreSeeds, renderFrames, renderSequences} from '../workflows';
 import {doesDirectoryExist, doesFileExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../common/helpers';
 import seedrandom from 'seedrandom';
 import {ScriptConfig} from '../interfaces';
 import {isValidScriptConfig} from '../common/eventScript';
+import {QueueManager} from '../managers/queue.manager';
 
 dotenv.config();
 
@@ -238,7 +239,7 @@ async function run() {
                         scriptConfig: params.scriptConfig,
                     },
                 ],
-                taskQueue: TASK_QUEUE_RENDER,
+                taskQueue: QueueManager.render,
                 workflowId: uuid,
             });
             break;
@@ -262,7 +263,7 @@ async function run() {
                         scriptConfig: params.scriptConfig,
                     },
                 ],
-                taskQueue: TASK_QUEUE_RENDER,
+                taskQueue: QueueManager.render,
                 workflowId: uuid,
             });
             break;
@@ -281,7 +282,7 @@ async function run() {
                         scriptConfig: params.scriptConfig,
                     },
                 ],
-                taskQueue: TASK_QUEUE_RENDER,
+                taskQueue: QueueManager.render,
                 workflowId: uuid,
             });
             break;
