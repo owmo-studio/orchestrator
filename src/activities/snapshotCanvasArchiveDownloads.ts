@@ -79,6 +79,8 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
     client.on('Browser.downloadWillBegin', async event => {
         const {suggestedFilename, guid} = event;
         const newFileName = `${params.seed}.${suggestedFilename}`;
+        const oldFilePath = path.resolve(params.outDir, event.guid);
+        const newFilePath = path.resolve(params.outDir, newFileName);
         guids[guid] = newFileName;
 
         const downloadPromise: Promise<string> = new Promise(resolve => {
@@ -86,8 +88,11 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
                 if (guid !== event.guid) return;
                 if (event.state === 'completed') {
                     try {
-                        fs.renameSync(path.resolve(params.outDir, event.guid), path.resolve(params.outDir, guids[event.guid]));
-                        resolve(guids[event.guid]);
+                        if (fs.existsSync(newFilePath)) {
+                            fs.unlinkSync(newFilePath);
+                        }
+                        fs.renameSync(oldFilePath, newFilePath);
+                        resolve(newFilePath);
                     } catch (err) {
                         console.log(err);
                         throw err;
