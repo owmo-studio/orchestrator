@@ -1,12 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import * as activity from '@temporalio/activity';
-import {addOrUpdateQueryParams, createZipArchive, delay} from '../helpers';
+import {addOrUpdateQueryParams, createZipArchive, delay} from '../common/helpers';
 import {EngineConfig, RenderFrame} from '../interfaces';
-import {PuppeteerBrowser} from '../puppeteer-browser';
-import {logActivity} from '../logging';
-
-interface Params extends RenderFrame {}
+import {BrowserManager} from '../managers/browser.manager';
+import {logActivity} from '../common/logging';
 
 interface Output {
     timeToRender: string;
@@ -24,7 +22,7 @@ function pad(num: number) {
     return num < 10 ? '0' + num : num;
 }
 
-export async function snapshotCanvasArchiveDownloads(params: Params): Promise<Output> {
+export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promise<Output> {
     const context = activity.Context.current();
 
     logActivity({
@@ -64,7 +62,7 @@ export async function snapshotCanvasArchiveDownloads(params: Params): Promise<Ou
 
     const filepath = `${params.outDir}/${params.seed}.${extension('png')}`;
 
-    const browser = await PuppeteerBrowser.getConnectedBrowser();
+    const browser = await BrowserManager.getConnectedBrowser();
 
     const client = await browser.target().createCDPSession();
 
@@ -81,6 +79,8 @@ export async function snapshotCanvasArchiveDownloads(params: Params): Promise<Ou
     client.on('Browser.downloadWillBegin', async event => {
         const {suggestedFilename, guid} = event;
         const newFileName = `${params.seed}.${suggestedFilename}`;
+        const oldFilePath = path.resolve(params.outDir, event.guid);
+        const newFilePath = path.resolve(params.outDir, newFileName);
         guids[guid] = newFileName;
 
         const downloadPromise: Promise<string> = new Promise(resolve => {
@@ -88,8 +88,11 @@ export async function snapshotCanvasArchiveDownloads(params: Params): Promise<Ou
                 if (guid !== event.guid) return;
                 if (event.state === 'completed') {
                     try {
-                        fs.renameSync(path.resolve(params.outDir, event.guid), path.resolve(params.outDir, guids[event.guid]));
-                        resolve(guids[event.guid]);
+                        if (fs.existsSync(newFilePath)) {
+                            fs.unlinkSync(newFilePath);
+                        }
+                        fs.renameSync(oldFilePath, newFilePath);
+                        resolve(newFilePath);
                     } catch (err) {
                         console.log(err);
                         throw err;
@@ -156,7 +159,8 @@ export async function snapshotCanvasArchiveDownloads(params: Params): Promise<Ou
             const interval = setInterval(() => {
                 if (messageReceived) {
                     clearInterval(interval);
-                    resolve('done');
+                    const waitToResolve = downloadsInProgress.length > 0 ? 1000 : 0;
+                    setTimeout(() => resolve('done'), waitToResolve);
                 }
             }, 100);
             setTimeout(() => {

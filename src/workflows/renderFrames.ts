@@ -1,5 +1,7 @@
 import {proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
+import {EventScript} from '../common/eventScript';
+import {ScriptConfig} from '../interfaces';
 
 interface Params {
     uuid: string;
@@ -10,9 +12,10 @@ interface Params {
     timeout: number;
     seeds: Array<string>;
     mkDir?: string;
+    scriptConfig?: ScriptConfig;
 }
 
-const {createFsDirectory} = proxyActivities<typeof activities>({
+const {makeFsDirectory} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
 });
 
@@ -24,16 +27,21 @@ export async function renderFrames(params: Params): Promise<void> {
     let outputDirectory = params.outDir;
 
     if (params.mkDir) {
-        const {outDir} = await createFsDirectory({
+        const {outDir} = await makeFsDirectory({
             rootPath: params.outDir,
             dirName: params.mkDir,
         });
         outputDirectory = outDir;
     }
 
+    const scriptParams = {scriptConfig: params.scriptConfig, execPath: outputDirectory};
+
+    await EventScript.Work.Pre(scriptParams);
+
     await Promise.all(
-        params.seeds.map(seed => {
-            return snapshotCanvasArchiveDownloads({
+        params.seeds.map(async seed => {
+            await EventScript.Frame.Pre({...scriptParams, args: [`${seed}`]});
+            await snapshotCanvasArchiveDownloads({
                 uuid: params.uuid,
                 seed,
                 url: params.url,
@@ -48,6 +56,9 @@ export async function renderFrames(params: Params): Promise<void> {
                     isPadded: false,
                 },
             });
+            await EventScript.Frame.Post({...scriptParams, args: [`${seed}`]});
         }),
     );
+
+    await EventScript.Work.Post(scriptParams);
 }

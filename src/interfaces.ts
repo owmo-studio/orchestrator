@@ -48,3 +48,30 @@ export interface Segment {
     padding: number;
     fps: number;
 }
+
+export interface Script {
+    path: string;
+    args?: Array<string>;
+}
+
+export interface ScriptConfig {
+    work?: {
+        pre?: Script;
+        post?: Script;
+    };
+    sequence?: {
+        pre?: Script;
+        post?: Script;
+    };
+    frame?: {
+        pre?: Script;
+        post?: Script;
+    };
+}
+
+export interface ScriptExec {
+    label: string;
+    script: Script;
+    execPath: string;
+    args?: Array<string>;
+}

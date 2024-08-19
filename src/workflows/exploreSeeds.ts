@@ -1,5 +1,7 @@
 import {proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
+import {EventScript} from '../common/eventScript';
+import {ScriptConfig} from '../interfaces';
 
 interface Params {
     uuid: string;
@@ -10,9 +12,10 @@ interface Params {
     timeout: number;
     count: number;
     mkDir?: string;
+    scriptConfig?: ScriptConfig;
 }
 
-const {makeArrayOfHashes, createFsDirectory} = proxyActivities<typeof activities>({
+const {getArrayOfHashes, makeFsDirectory} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
 });
 
@@ -21,25 +24,30 @@ const {snapshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
 });
 
 export async function exploreSeeds(params: Params): Promise<void> {
-    const {hashes} = await makeArrayOfHashes({
+    const {hashes} = await getArrayOfHashes({
         uuid: params.uuid,
         count: params.count,
     });
 
     let outputDirectory = params.outDir;
     if (params.mkDir) {
-        const {outDir} = await createFsDirectory({
+        const {outDir} = await makeFsDirectory({
             rootPath: params.outDir,
             dirName: params.mkDir,
         });
         outputDirectory = outDir;
     }
 
+    const scriptsParams = {scriptConfig: params.scriptConfig, execPath: outputDirectory};
+
+    await EventScript.Work.Pre(scriptsParams);
+
     await Promise.all(
-        hashes.map(hash => {
-            return snapshotCanvasArchiveDownloads({
+        hashes.map(async seed => {
+            await EventScript.Frame.Pre({...scriptsParams, args: [`${seed}`]});
+            await snapshotCanvasArchiveDownloads({
                 uuid: params.uuid,
-                seed: hash,
+                seed,
                 url: params.url,
                 width: params.width,
                 height: params.height,
@@ -52,6 +60,9 @@ export async function exploreSeeds(params: Params): Promise<void> {
                     isPadded: false,
                 },
             });
+            await EventScript.Frame.Post({...scriptsParams, args: [`${seed}`]});
         }),
     );
+
+    await EventScript.Work.Post(scriptsParams);
 }

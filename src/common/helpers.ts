@@ -1,5 +1,4 @@
 import fs from 'fs';
-import path from 'path';
 import JSZip from 'jszip';
 import seedrandom from 'seedrandom';
 
@@ -23,9 +22,11 @@ export function makeHashStringUsingPRNG(prng: seedrandom.PRNG): string {
     return hash;
 }
 
-export function doesDirectoryExist(inputPath: string): boolean {
-    const fullPath = path.resolve(inputPath);
-    const dirPath = path.dirname(fullPath);
+export function doesFileExist(filePath: string): boolean {
+    return fs.existsSync(filePath) && fs.statSync(filePath).isFile();
+}
+
+export function doesDirectoryExist(dirPath: string): boolean {
     return fs.existsSync(dirPath) && fs.lstatSync(dirPath).isDirectory();
 }
 

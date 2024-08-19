@@ -1,12 +1,15 @@
 import path from 'path';
+import fs from 'fs';
 import * as dotenv from 'dotenv';
 import {v4 as uuidv4} from 'uuid';
 import {input, number, select, confirm} from '@inquirer/prompts';
 import {Connection, Client} from '@temporalio/client';
-import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE} from '../constants';
+import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE_RENDER} from '../constants';
 import {exploreSeeds, renderFrames, renderSequences} from '../workflows';
-import {doesDirectoryExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../helpers';
+import {doesDirectoryExist, doesFileExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../common/helpers';
 import seedrandom from 'seedrandom';
+import {ScriptConfig} from '../interfaces';
+import {isValidScriptConfig} from '../common/eventScript';
 
 dotenv.config();
 
@@ -84,7 +87,7 @@ async function run() {
 
     params['outDir'] = await input({
         message: 'Output directory path:',
-        default: isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', '..', 'out')}`,
+        default: isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', 'out')}`,
         validate: path => doesDirectoryExist(path),
     });
 
@@ -194,6 +197,25 @@ async function run() {
         });
     }
 
+    const useScriptConfig = await confirm({
+        message: 'Run pre/post event scripts?',
+        default: false,
+    });
+
+    if (useScriptConfig) {
+        const configPath = await input({
+            message: 'Path to JSON config file:',
+            validate: path => doesFileExist(path),
+        });
+
+        const data = fs.readFileSync(configPath, 'utf-8');
+        const scriptConfig = JSON.parse(data) as ScriptConfig;
+
+        if (!isValidScriptConfig(scriptConfig)) throw new Error('Script Config does not match interface');
+
+        params['scriptConfig'] = scriptConfig;
+    }
+
     const ok = await confirm({
         message: 'Confirm to submit:',
     });
@@ -213,9 +235,10 @@ async function run() {
                         timeout: params.timeout,
                         outDir: params.outDir,
                         mkDir: params.mkDirName,
+                        scriptConfig: params.scriptConfig,
                     },
                 ],
-                taskQueue: TASK_QUEUE,
+                taskQueue: TASK_QUEUE_RENDER,
                 workflowId: uuid,
             });
             break;
@@ -236,9 +259,10 @@ async function run() {
                             ranges: params.frameRanges,
                         },
                         mkDir: params.mkDirName,
+                        scriptConfig: params.scriptConfig,
                     },
                 ],
-                taskQueue: TASK_QUEUE,
+                taskQueue: TASK_QUEUE_RENDER,
                 workflowId: uuid,
             });
             break;
@@ -254,9 +278,10 @@ async function run() {
                         timeout: params.timeout,
                         count: params.count,
                         mkDir: params.mkDirName,
+                        scriptConfig: params.scriptConfig,
                     },
                 ],
-                taskQueue: TASK_QUEUE,
+                taskQueue: TASK_QUEUE_RENDER,
                 workflowId: uuid,
             });
             break;

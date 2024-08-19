@@ -1,8 +1,9 @@
 import {proxyActivities} from '@temporalio/workflow';
 import {executeChild} from '@temporalio/workflow';
 import * as activities from '../activities';
-import {Sequence, Segment} from '../interfaces';
+import {Sequence, Segment, ScriptConfig} from '../interfaces';
 import {MAX_CHILD_FRAMES} from '../constants';
+import {EventScript} from '../common/eventScript';
 
 interface Params {
     uuid: string;
@@ -14,9 +15,10 @@ interface Params {
     seeds: Array<string>;
     sequence: Sequence;
     mkDir?: string;
+    scriptConfig?: ScriptConfig;
 }
 
-const {createFsDirectory} = proxyActivities<typeof activities>({
+const {makeFsDirectory} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
 });
 
@@ -24,7 +26,7 @@ export async function renderSequences(params: Params): Promise<void> {
     let outputDirectory = params.outDir;
 
     if (params.mkDir) {
-        const {outDir} = await createFsDirectory({
+        const {outDir} = await makeFsDirectory({
             rootPath: params.outDir,
             dirName: params.mkDir,
         });
@@ -52,9 +54,14 @@ export async function renderSequences(params: Params): Promise<void> {
         chunk++;
     }
 
+    const scriptParams = {scriptConfig: params.scriptConfig, execPath: outputDirectory};
+
+    await EventScript.Work.Pre(scriptParams);
+
     await Promise.all(
         params.seeds.map(async (seed, seedIndex) => {
-            return Promise.all(
+            await EventScript.Sequence.Pre({...scriptParams, args: [`${seed}`, `${params.sequence.padding}`, `${params.sequence.fps}`]});
+            await Promise.all(
                 segmentsToRender.map(segment => {
                     return executeChild('renderSegment', {
                         args: [
@@ -67,12 +74,16 @@ export async function renderSequences(params: Params): Promise<void> {
                                 outDir: outputDirectory,
                                 timeout: params.timeout,
                                 segment,
+                                scriptConfig: params.scriptConfig,
                             },
                         ],
                         workflowId: `${params.uuid}_s[${seedIndex}]_c[${segment.chunk}]`,
                     });
                 }),
             );
+            await EventScript.Sequence.Post({...scriptParams, args: [`${seed}`, `${params.sequence.padding}`, `${params.sequence.fps}`]});
         }),
     );
+
+    await EventScript.Work.Post(scriptParams);
 }
