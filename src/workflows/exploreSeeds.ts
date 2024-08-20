@@ -1,6 +1,6 @@
 import {proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
-import {EventScript} from '../common/eventScript';
+import {EventScript} from '../events/scripts';
 import {ScriptConfig} from '../interfaces';
 
 interface Params {

@@ -25,7 +25,7 @@ async function run({scriptConfig, execPath, args, event, when}: RunParams) {
     const script = scriptConfig?.[event]?.[when];
     if (!script) return;
 
-    const ARGS: Array<string> = [...(script.args ?? []), ...(args ?? [])];
+    const ARGS: Array<string> = [...(args ?? []), ...(script.args ?? [])];
 
     await executeScript({
         label: `EventScript::${event}-${when}`,

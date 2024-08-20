@@ -9,7 +9,7 @@ import {exploreSeeds, renderFrames, renderSequences} from '../workflows';
 import {doesDirectoryExist, doesFileExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../common/helpers';
 import seedrandom from 'seedrandom';
 import {ScriptConfig} from '../interfaces';
-import {isValidScriptConfig} from '../common/eventScript';
+import {isValidScriptConfig} from '../events/scripts';
 import {QueueManager} from '../managers/queue.manager';
 
 dotenv.config();
