@@ -148,6 +148,12 @@ async function run() {
         min: 1,
     });
 
+    params['devicePixelRatio'] = await number({
+        message: 'Pixel Ratio:',
+        required: true,
+        default: 1,
+    });
+
     // 24 hours (minus 1 minute) to trigger before "startToCloseTimeout"
     params['timeout'] = 24 * 60 * 60 * 1000 - 1000 * 60;
 
@@ -233,6 +239,7 @@ async function run() {
                         seeds: params.seeds,
                         width: params.width,
                         height: params.height,
+                        devicePixelRatio: params.devicePixelRatio,
                         timeout: params.timeout,
                         outDir: params.outDir,
                         mkDir: params.mkDirName,
@@ -252,6 +259,7 @@ async function run() {
                         seeds: params.seeds,
                         width: params.width,
                         height: params.height,
+                        devicePixelRatio: params.devicePixelRatio,
                         timeout: params.timeout,
                         outDir: params.outDir,
                         sequence: {
@@ -275,6 +283,7 @@ async function run() {
                         url: params.url,
                         width: params.width,
                         height: params.height,
+                        devicePixelRatio: params.devicePixelRatio,
                         outDir: params.outDir,
                         timeout: params.timeout,
                         count: params.count,

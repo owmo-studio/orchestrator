@@ -8,6 +8,7 @@ interface Params {
     url: string;
     width: number;
     height: number;
+    devicePixelRatio: number;
     outDir: string;
     timeout: number;
     seed: string;
@@ -31,6 +32,7 @@ export async function renderSegment(params: Params): Promise<void> {
                 url: params.url,
                 width: params.width,
                 height: params.height,
+                devicePixelRatio: params.devicePixelRatio,
                 outDir: params.outDir,
                 timeout: params.timeout,
                 frame: {

@@ -10,6 +10,7 @@ interface Params {
     url: string;
     width: number;
     height: number;
+    devicePixelRatio: number;
     outDir: string;
     timeout: number;
     seeds: Array<string>;
@@ -60,7 +61,8 @@ export async function renderSequences(params: Params): Promise<void> {
 
     await Promise.all(
         params.seeds.map(async (seed, seedIndex) => {
-            await EventScript.Sequence.Pre({...scriptParams, args: [`${seed}`, `${params.sequence.padding}`, `${params.sequence.fps}`]});
+            const args = [`${seed}`, `${params.sequence.padding}`, `${params.width}`, `${params.height}`, `${params.sequence.fps}`];
+            await EventScript.Sequence.Pre({...scriptParams, args});
             await Promise.all(
                 segmentsToRender.map(segment => {
                     return executeChild('renderSegment', {
@@ -71,6 +73,7 @@ export async function renderSequences(params: Params): Promise<void> {
                                 seed,
                                 width: params.width,
                                 height: params.height,
+                                devicePixelRatio: params.devicePixelRatio,
                                 outDir: outputDirectory,
                                 timeout: params.timeout,
                                 segment,
@@ -81,7 +84,7 @@ export async function renderSequences(params: Params): Promise<void> {
                     });
                 }),
             );
-            await EventScript.Sequence.Post({...scriptParams, args: [`${seed}`, `${params.sequence.padding}`, `${params.sequence.fps}`]});
+            await EventScript.Sequence.Post({...scriptParams, args});
         }),
     );
 

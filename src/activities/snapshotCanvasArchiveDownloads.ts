@@ -46,6 +46,7 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
             method: 'exact',
             width: params.width,
             height: params.height,
+            devicePixelRatio: params.devicePixelRatio,
         },
         keepCanvasOnDestroy: true,
     };

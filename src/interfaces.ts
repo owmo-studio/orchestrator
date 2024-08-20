@@ -9,6 +9,7 @@ export interface EngineConfig {
         method: 'exact';
         width: number;
         height: number;
+        devicePixelRatio: number;
     };
     keepCanvasOnDestroy: true;
 }
@@ -21,6 +22,7 @@ export interface RenderFrame {
     url: string;
     width: number;
     height: number;
+    devicePixelRatio: number;
     outDir: string;
     timeout: number;
     frame: {

@@ -8,6 +8,7 @@ interface Params {
     url: string;
     width: number;
     height: number;
+    devicePixelRatio: number;
     outDir: string;
     timeout: number;
     seeds: Array<string>;
@@ -47,6 +48,7 @@ export async function renderFrames(params: Params): Promise<void> {
                 url: params.url,
                 width: params.width,
                 height: params.height,
+                devicePixelRatio: params.devicePixelRatio,
                 outDir: outputDirectory,
                 timeout: params.timeout,
                 frame: {
