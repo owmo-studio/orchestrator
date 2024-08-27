@@ -1,6 +1,6 @@
 {
     "name": "@combomash/orchestrator",
-    "version": "0.5.3",
+    "version": "0.5.4",
     "private": true,
     "scripts": {
         "submit": "ts-node src/clients/submit.cli.ts",
