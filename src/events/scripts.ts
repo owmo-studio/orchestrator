@@ -5,7 +5,7 @@ import {TASK_QUEUE_SCRIPT} from '../constants';
 
 const {executeScript} = proxyActivities<typeof activities>({
     startToCloseTimeout: '24 hours',
-    heartbeatTimeout: '30 seconds',
+    heartbeatTimeout: '60 seconds',
     taskQueue: TASK_QUEUE_SCRIPT,
 });
 
