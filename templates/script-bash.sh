@@ -1,11 +1,12 @@
 #!/bin/bash
 
 cleanup() {
+    local exit_code=$1
     rm -rf "$TEMP_DIR"
     pkill -P $$
-    exit 1
+    exit $exit_code
 }
-trap cleanup SIGINT SIGTERM
+trap 'cleanup $?' SIGINT SIGTERM ERR
 
 TEMP_DIR=$(mktemp -d)
 
