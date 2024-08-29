@@ -41,6 +41,14 @@ export async function executeScript(params: ScriptExec): Promise<void> {
         await new Promise<void>((resolve, reject) => {
             const process = spawn('bash', [params.script.path, params.execPath, ...(params.args ?? [])], {stdio: ['inherit', 'pipe', 'pipe']});
 
+            const checkProcessStatus = () => {
+                if (process.exitCode === null) {
+                    activity.heartbeat();
+                }
+            };
+
+            const intervalId = setInterval(checkProcessStatus, 5000);
+
             process.stdout.on('data', data => {
                 logActivity({
                     context,
@@ -57,6 +65,7 @@ export async function executeScript(params: ScriptExec): Promise<void> {
             });
 
             process.on('close', code => {
+                clearInterval(intervalId);
                 if (code === 0) {
                     resolve();
                 } else {
