@@ -16,7 +16,7 @@ async function run() {
         activities,
         taskQueue: TASK_QUEUE_SCRIPT,
         workflowsPath: require.resolve('../workflows'),
-        maxConcurrentActivityTaskExecutions: 2,
+        maxConcurrentActivityTaskExecutions: 1,
     });
 
     const shutdown = async () => {
