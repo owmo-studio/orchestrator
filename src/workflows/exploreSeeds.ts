@@ -22,7 +22,6 @@ const {getArrayOfHashes, makeFsDirectory} = proxyActivities<typeof activities>({
 
 const {snapshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
     startToCloseTimeout: '24 hours',
-    heartbeatTimeout: '60 seconds',
 });
 
 export async function exploreSeeds(params: Params): Promise<void> {

@@ -18,7 +18,6 @@ interface Params {
 
 const {snapshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
     startToCloseTimeout: '24 hours',
-    heartbeatTimeout: '60 seconds',
 });
 
 export async function renderSegment(params: Params): Promise<void> {
