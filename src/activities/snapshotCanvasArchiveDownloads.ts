@@ -35,6 +35,10 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
 
     const startTime: Date = new Date();
 
+    const intervalId = setInterval(() => {
+        activity.heartbeat();
+    }, 5000);
+
     const engineConfig: EngineConfig = {
         seed: params.seed,
         runConfig: {
@@ -197,6 +201,7 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
     } finally {
         await client.detach();
         await browser.disconnect();
+        clearInterval(intervalId);
     }
 
     const endTime: Date = new Date();
