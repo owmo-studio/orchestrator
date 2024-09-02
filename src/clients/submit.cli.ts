@@ -33,19 +33,19 @@ async function run() {
                 {
                     name: 'explore',
                     value: 'explore',
-                    description: 'Generate random seeds to queue',
+                    description: 'Generate random seeds to render',
                 },
                 {
-                    name: 'queue',
-                    value: 'queue',
+                    name: 'render',
+                    value: 'render',
                     description: 'Render a specific configuration',
                 },
             ],
         });
 
-        if (goal === 'queue') {
+        if (goal === 'render') {
             type = await select({
-                message: 'What type of queue?',
+                message: 'What type of render?',
                 choices: [
                     {
                         name: 'frame(s)',
@@ -59,7 +59,7 @@ async function run() {
                     },
                 ],
             });
-            return `queue${type}`;
+            return `render${type}`;
         }
 
         if (goal === 'explore') {
@@ -116,7 +116,7 @@ async function run() {
         params['mkDirName'] = mkDirName;
     }
 
-    if (goal === 'queue') {
+    if (goal === 'render') {
         params['seeds'] = await input({
             message: 'Seed(s):',
             required: true,
