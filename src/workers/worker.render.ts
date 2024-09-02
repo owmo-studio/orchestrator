@@ -16,7 +16,7 @@ async function run() {
     const worker = await Worker.create({
         connection,
         activities,
-        taskQueue: QueueManager.render,
+        taskQueue: QueueManager.queue,
         workflowsPath: require.resolve('../workflows'),
         maxConcurrentActivityTaskExecutions: 1,
     });

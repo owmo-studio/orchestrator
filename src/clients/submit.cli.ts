@@ -33,19 +33,19 @@ async function run() {
                 {
                     name: 'explore',
                     value: 'explore',
-                    description: 'Generate random seeds to render',
+                    description: 'Generate random seeds to queue',
                 },
                 {
-                    name: 'render',
-                    value: 'render',
+                    name: 'queue',
+                    value: 'queue',
                     description: 'Render a specific configuration',
                 },
             ],
         });
 
-        if (goal === 'render') {
+        if (goal === 'queue') {
             type = await select({
-                message: 'What type of render?',
+                message: 'What type of queue?',
                 choices: [
                     {
                         name: 'frame(s)',
@@ -59,7 +59,7 @@ async function run() {
                     },
                 ],
             });
-            return `render${type}`;
+            return `queue${type}`;
         }
 
         if (goal === 'explore') {
@@ -116,7 +116,7 @@ async function run() {
         params['mkDirName'] = mkDirName;
     }
 
-    if (goal === 'render') {
+    if (goal === 'queue') {
         params['seeds'] = await input({
             message: 'Seed(s):',
             required: true,
@@ -246,8 +246,8 @@ async function run() {
                         scriptConfig: params.scriptConfig,
                     },
                 ],
-                taskQueue: QueueManager.render,
-                workflowId: uuid,
+                taskQueue: QueueManager.queue,
+                workflowId: `${uuid}-${QueueManager.queue}`,
             });
             break;
         case 'renderSequences':
@@ -271,8 +271,8 @@ async function run() {
                         scriptConfig: params.scriptConfig,
                     },
                 ],
-                taskQueue: QueueManager.render,
-                workflowId: uuid,
+                taskQueue: QueueManager.queue,
+                workflowId: `${uuid}-${QueueManager.queue}`,
             });
             break;
         case 'exploreSeeds':
@@ -291,8 +291,8 @@ async function run() {
                         scriptConfig: params.scriptConfig,
                     },
                 ],
-                taskQueue: QueueManager.render,
-                workflowId: uuid,
+                taskQueue: QueueManager.queue,
+                workflowId: `${uuid}-${QueueManager.queue}`,
             });
             break;
     }

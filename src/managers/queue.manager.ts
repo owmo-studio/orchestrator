@@ -6,7 +6,7 @@ export class QueueManager {
     private customQueue: string | undefined;
 
     private constructor() {
-        this.customQueue = process.env.CUSTOM_QUEUE ?? undefined;
+        this.customQueue = process.env.QUEUE ?? undefined;
     }
 
     static get instance(): QueueManager {
@@ -16,7 +16,7 @@ export class QueueManager {
         return QueueManager.#instance;
     }
 
-    static get render(): string {
+    static get queue(): string {
         const instance = QueueManager.instance;
         return `${TASK_QUEUE_RENDER}${instance.customQueue ? `-${instance.customQueue}` : ''}`;
     }
