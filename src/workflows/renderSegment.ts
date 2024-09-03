@@ -1,7 +1,7 @@
 import {proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
 import {ScriptConfig, Segment} from '../interfaces';
-import {EventScript} from '../events/run-scripts';
+import {EventScript} from '../event-scripts/run-pre-posts';
 
 interface Params {
     uuid: string;
