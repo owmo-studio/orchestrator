@@ -3,7 +3,7 @@ import {executeChild} from '@temporalio/workflow';
 import * as activities from '../activities';
 import {Sequence, Segment, ScriptConfig} from '../interfaces';
 import {MAX_CHILD_FRAMES} from '../constants';
-import {EventScript} from '../events/scripts';
+import {EventScript} from '../event-scripts/run-pre-posts';
 
 interface Params {
     uuid: string;

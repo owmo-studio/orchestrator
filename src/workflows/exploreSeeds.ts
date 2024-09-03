@@ -1,6 +1,6 @@
 import {proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
-import {EventScript} from '../events/scripts';
+import {EventScript} from '../event-scripts/run-pre-posts';
 import {ScriptConfig} from '../interfaces';
 
 interface Params {
@@ -40,13 +40,13 @@ export async function exploreSeeds(params: Params): Promise<void> {
         outputDirectory = outDir;
     }
 
-    const scriptsParams = {scriptConfig: params.scriptConfig, execPath: outputDirectory};
+    const scriptParams = {scriptConfig: params.scriptConfig, execPath: outputDirectory};
 
-    await EventScript.Work.Pre(scriptsParams);
+    await EventScript.Work.Pre(scriptParams);
 
     await Promise.all(
         hashes.map(async seed => {
-            await EventScript.Frame.Pre({...scriptsParams, args: [`${seed}`]});
+            await EventScript.Frame.Pre({...scriptParams, args: [`${seed}`]});
             await snapshotCanvasArchiveDownloads({
                 uuid: params.uuid,
                 seed,
@@ -63,9 +63,9 @@ export async function exploreSeeds(params: Params): Promise<void> {
                     isPadded: false,
                 },
             });
-            await EventScript.Frame.Post({...scriptsParams, args: [`${seed}`]});
+            await EventScript.Frame.Post({...scriptParams, args: [`${seed}`]});
         }),
     );
 
-    await EventScript.Work.Post(scriptsParams);
+    await EventScript.Work.Post(scriptParams);
 }
