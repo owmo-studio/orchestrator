@@ -1,15 +1,15 @@
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
 import * as dotenv from 'dotenv';
 import {v4 as uuidv4} from 'uuid';
 import {input, number, select, confirm} from '@inquirer/prompts';
 import {Connection, Client} from '@temporalio/client';
 import {DEV_TEMPORAL_ADDRESS} from '../constants';
 import {exploreSeeds, renderFrames, renderSequences} from '../workflows';
-import {doesDirectoryExist, doesFileExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../common/helpers';
+import {doesDirectoryExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../common/helpers';
 import seedrandom from 'seedrandom';
 import {ScriptConfig} from '../interfaces';
-import {isValidScriptConfig} from '../events/scripts';
+import {isValidScriptConfig} from '../events/validate-script-config';
 import {QueueManager} from '../managers/queue.manager';
 
 dotenv.config();
@@ -209,18 +209,21 @@ async function run() {
         default: false,
     });
 
+    function getConfig(configPath: string) {
+        try {
+            const data = fs.readFileSync(configPath, 'utf-8');
+            return JSON.parse(data) as ScriptConfig;
+        } catch (error) {
+            return {error}; // will throw in validation
+        }
+    }
+
     if (useScriptConfig) {
         const configPath = await input({
             message: 'Path to JSON config file:',
-            validate: path => doesFileExist(path),
+            validate: configPath => isValidScriptConfig(getConfig(configPath)),
         });
-
-        const data = fs.readFileSync(configPath, 'utf-8');
-        const scriptConfig = JSON.parse(data) as ScriptConfig;
-
-        if (!isValidScriptConfig(scriptConfig)) throw new Error('Script Config does not match interface');
-
-        params['scriptConfig'] = scriptConfig;
+        params['scriptConfig'] = getConfig(configPath);
     }
 
     const ok = await confirm({
