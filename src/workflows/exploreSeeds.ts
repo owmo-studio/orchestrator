@@ -46,7 +46,8 @@ export async function exploreSeeds(params: Params): Promise<void> {
 
     await Promise.all(
         hashes.map(async seed => {
-            await EventScript.Frame.Pre({...scriptParams, args: [`${seed}`]});
+            const args = [`${seed}`, `${params.width}`, `${params.height}`];
+            await EventScript.Frame.Pre({...scriptParams, args});
             await snapshotCanvasArchiveDownloads({
                 uuid: params.uuid,
                 seed,
@@ -63,7 +64,7 @@ export async function exploreSeeds(params: Params): Promise<void> {
                     isPadded: false,
                 },
             });
-            await EventScript.Frame.Post({...scriptParams, args: [`${seed}`]});
+            await EventScript.Frame.Post({...scriptParams, args});
         }),
     );
 

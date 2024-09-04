@@ -61,7 +61,7 @@ export async function renderSequences(params: Params): Promise<void> {
 
     await Promise.all(
         params.seeds.map(async (seed, seedIndex) => {
-            const args = [`${seed}`, `${params.sequence.padding}`, `${params.width}`, `${params.height}`, `${params.sequence.fps}`];
+            const args = [`${seed}`, `${params.width}`, `${params.height}`, `${params.sequence.padding}`, `${params.sequence.fps}`];
             await EventScript.Sequence.Pre({...scriptParams, args});
             await Promise.all(
                 segmentsToRender.map(segment => {
