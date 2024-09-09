@@ -10,8 +10,7 @@
         "worker.script": "ts-node src/workers/worker.script.ts",
         "worker.script.prod": "NODE_ENV=production ts-node src/workers/worker.script.ts",
         "submit.prod": "NODE_ENV=production ts-node src/clients/submit.cli.ts",
-        "clean": "rm -rf ./lib & rm -rf ./out/*",
-        "version": "node -v"
+        "clean": "rm -rf ./lib & rm -rf ./out/*"
     },
     "nodemonConfig": {
         "execMap": {
@@ -23,7 +22,7 @@
         ]
     },
     "dependencies": {
-        "@inquirer/prompts": "^5.3.8",
+        "@inquirer/prompts": "^5.5.0",
         "@temporalio/activity": "^1.11.1",
         "@temporalio/client": "^1.11.1",
         "@temporalio/worker": "^1.11.1",
@@ -34,9 +33,8 @@
         "minimist": "^1.2.8",
         "ms": "^2.1.3",
         "nanoid": "^5.0.7",
-        "node": "20.17.0",
         "ps-node": "^0.1.6",
-        "puppeteer": "^23.1.0",
+        "puppeteer": "^23.3.0",
         "seedrandom": "^3.0.5",
         "uuid": "^10.0.0"
     },
@@ -46,17 +44,17 @@
         "@types/minimist": "^1.2.5",
         "@types/mocha": "10.x",
         "@types/ms": "^0.7.34",
-        "@types/node": "^22.3.0",
+        "@types/node": "^22.5.4",
         "@types/ps-node": "^0.1.3",
         "@types/uuid": "^10.0.0",
-        "@typescript-eslint/eslint-plugin": "^8.1.0",
-        "@typescript-eslint/parser": "^8.1.0",
+        "@typescript-eslint/eslint-plugin": "^8.5.0",
+        "@typescript-eslint/parser": "^8.5.0",
         "eslint": "^8.56.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-deprecation": "^2.0.0",
         "mocha": "10.x",
         "prettier": "^3.3.3",
         "ts-node": "^10.9.2",
-        "typescript": "^5.5.4"
+        "typescript": "^5.6.2"
     }
 }
