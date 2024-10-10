@@ -1,6 +1,6 @@
 {
     "name": "@combomash/orchestrator",
-    "version": "0.6.1",
+    "version": "0.7.0",
     "private": true,
     "scripts": {
         "submit": "ts-node src/clients/submit.cli.ts",
@@ -39,6 +39,7 @@
         "uuid": "^10.0.0"
     },
     "devDependencies": {
+        "@combomash/engine": "^0.7.0",
         "@temporalio/testing": "^1.11.1",
         "@tsconfig/node18": "^18.2.4",
         "@types/minimist": "^1.2.5",
