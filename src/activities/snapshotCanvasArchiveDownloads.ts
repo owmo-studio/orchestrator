@@ -1,8 +1,9 @@
 import fs from 'fs';
 import path from 'path';
+import * as Engine from '@combomash/engine';
 import * as activity from '@temporalio/activity';
 import {addOrUpdateQueryParams, createZipArchive, delay} from '../common/helpers';
-import {EngineConfig, RenderFrame} from '../interfaces';
+import {RenderFrame} from '../interfaces';
 import {BrowserManager} from '../managers/browser.manager';
 import {logActivity} from '../common/logging';
 
@@ -39,19 +40,15 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
         activity.heartbeat();
     }, 5000);
 
-    const engineConfig: EngineConfig = {
+    const engineConfig: Engine.Configuration = {
         seed: params.seed,
-        runConfig: {
-            method: 'frames',
-            frame: params.frame.index,
-            framerate: params.frame.fps,
-        },
-        fitConfig: {
-            method: 'exact',
-            width: params.width,
-            height: params.height,
-            devicePixelRatio: params.devicePixelRatio,
-        },
+        renderMethod: 'offline',
+        frame: params.frame.index,
+        framerate: params.frame.fps,
+        fitMode: 'exact',
+        width: params.width,
+        height: params.height,
+        devicePixelRatio: params.devicePixelRatio,
         keepCanvasOnDestroy: true,
     };
 
