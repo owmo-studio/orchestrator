@@ -2,6 +2,10 @@ import puppeteer, {Browser} from 'puppeteer';
 import {delay, throwIfUndefined} from '../common/helpers';
 import ps from 'ps-node';
 
+interface ProcessError extends Error {
+    code?: string;
+}
+
 export class BrowserManager {
     static #instance: BrowserManager;
 
@@ -92,11 +96,48 @@ export class BrowserManager {
             clearInterval(this.instance.monitoringInterval);
         }
 
-        // Kill the browser PID
+        // Attempt graceful shutdown
         if (this.instance.browser) {
-            process.kill(this.instance.pid, 'SIGKILL');
-            await this.instance.browser.close();
-            this.instance.browser = null;
+            try {
+                await this.instance.browser.close();
+            } catch (err: unknown) {
+                if (err instanceof Error && (err.message.includes('Target closed') || err.message.includes('Navigating frame was detached'))) {
+                    console.warn('Browser was already closed:', err.message);
+                } else {
+                    console.error('Error closing browser:', err);
+                }
+            } finally {
+                this.instance.browser = null;
+            }
+        }
+
+        // Kill the browser process if it hasn't already exited
+        if (this.instance.pid) {
+            try {
+                process.kill(this.instance.pid, 'SIGTERM');
+                await new Promise<void>((resolve, reject) => {
+                    const checkIfExited = setInterval(() => {
+                        try {
+                            process.kill(this.instance.pid, 0);
+                        } catch (err: unknown) {
+                            const processError = err as ProcessError;
+                            if (processError.code === 'ESRCH') {
+                                clearInterval(checkIfExited);
+                                resolve();
+                            } else {
+                                reject(err);
+                            }
+                        }
+                    }, 100);
+                });
+            } catch (error: unknown) {
+                const processError = error as ProcessError;
+                if (processError.code === 'ESRCH') {
+                    console.warn('Process already exited');
+                } else {
+                    console.error('Error killing process:', error);
+                }
+            }
         }
     }
 }
