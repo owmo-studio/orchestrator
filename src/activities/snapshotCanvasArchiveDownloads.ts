@@ -1,11 +1,11 @@
+import * as Engine from '@owmo/engine';
+import * as activity from '@temporalio/activity';
 import fs from 'fs';
 import path from 'path';
-import * as Engine from '@combomash/engine';
-import * as activity from '@temporalio/activity';
 import {addOrUpdateQueryParams, createZipArchive, delay} from '../common/helpers';
+import {logActivity} from '../common/logging';
 import {RenderFrame} from '../interfaces';
 import {BrowserManager} from '../managers/browser.manager';
-import {logActivity} from '../common/logging';
 
 interface Output {
     timeToRender: string;

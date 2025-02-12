@@ -1,6 +1,6 @@
 {
-    "name": "@combomash/orchestrator",
-    "version": "0.7.2",
+    "name": "@owmo/orchestrator",
+    "version": "0.7.3",
     "private": true,
     "scripts": {
         "submit": "ts-node src/clients/submit.cli.ts",
@@ -23,6 +23,7 @@
     },
     "dependencies": {
         "@inquirer/prompts": "^7.0.0",
+        "@owmo/engine": "^0.7.3",
         "@temporalio/activity": "^1.11.3",
         "@temporalio/client": "^1.11.3",
         "@temporalio/worker": "^1.11.3",
@@ -39,7 +40,6 @@
         "uuid": "^10.0.0"
     },
     "devDependencies": {
-        "@combomash/engine": "^0.7.2",
         "@temporalio/testing": "^1.11.3",
         "@tsconfig/node18": "^18.2.4",
         "@types/minimist": "^1.2.5",

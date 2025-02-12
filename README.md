@@ -1,6 +1,6 @@
 # orchestrator
 
-Render workflows & activities for @combomash/engine via temporal.io
+Render workflows & activities for @owmo/engine via temporal.io
 
 ## v0.x.x (Alpha)
 
