@@ -1,6 +1,6 @@
 {
     "name": "@owmo/orchestrator",
-    "version": "0.7.4",
+    "version": "0.7.5",
     "private": true,
     "scripts": {
         "submit": "ts-node src/clients/submit.cli.ts",
