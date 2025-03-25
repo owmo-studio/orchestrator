@@ -101,9 +101,11 @@ async function run() {
         validate: url => isValidURL(url),
     });
 
+    const outEnvDir = process.env.OUT_FOLDER_PATH;
+
     params['outDir'] = await input({
         message: 'Output directory path:',
-        default: isProduction ? path.dirname(__dirname) : `${path.join(path.dirname(__dirname), '..', 'out')}`,
+        default: isProduction ? (outEnvDir ?? path.dirname(__dirname)) : `${path.join(path.dirname(__dirname), '..', 'out')}`,
         validate: path => doesDirectoryExist(path),
     });
 
