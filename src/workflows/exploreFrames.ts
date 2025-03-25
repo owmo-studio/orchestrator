@@ -25,7 +25,7 @@ const {snapshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
     heartbeatTimeout: '5 minutes',
 });
 
-export async function exploreSeeds(params: Params): Promise<void> {
+export async function exploreFrames(params: Params): Promise<void> {
     const {hashes} = await getArrayOfHashes({
         uuid: params.uuid,
         count: params.count,

@@ -12,19 +12,23 @@ interface Params {
     devicePixelRatio: number;
     outDir: string;
     timeout: number;
-    seeds: Array<string>;
+    count: number;
     sequence: Sequence;
     mkDir?: string;
     scriptConfig?: ScriptConfig;
 }
 
-const {makeFsDirectory} = proxyActivities<typeof activities>({
+const {getArrayOfHashes, makeFsDirectory} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
 });
 
-export async function renderSequences(params: Params): Promise<void> {
-    let outputDirectory = params.outDir;
+export async function exploreSequences(params: Params): Promise<void> {
+    const {hashes} = await getArrayOfHashes({
+        uuid: params.uuid,
+        count: params.count,
+    });
 
+    let outputDirectory = params.outDir;
     if (params.mkDir) {
         const {outDir} = await makeFsDirectory({
             rootPath: params.outDir,
@@ -59,7 +63,7 @@ export async function renderSequences(params: Params): Promise<void> {
     await EventScript.Work.Pre(scriptParams);
 
     await Promise.all(
-        params.seeds.map(async (seed, seedIndex) => {
+        hashes.map(async (seed, seedIndex) => {
             const args = [`${seed}`, `${params.width}`, `${params.height}`, `${params.sequence.padding}`, `${params.sequence.fps}`];
             await EventScript.Sequence.Pre({...scriptParams, args});
             await Promise.all(
