@@ -29,6 +29,7 @@ export async function exploreSequences(params: Params): Promise<void> {
     });
 
     let outputDirectory = params.outDir;
+
     if (params.mkDir) {
         const {outDir} = await makeFsDirectory({
             rootPath: params.outDir,
