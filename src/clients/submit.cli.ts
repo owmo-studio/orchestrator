@@ -1,16 +1,16 @@
+import {confirm, input, number, select} from '@inquirer/prompts';
+import {Client, Connection} from '@temporalio/client';
+import * as dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import * as dotenv from 'dotenv';
-import {v4 as uuidv4} from 'uuid';
-import {input, number, select, confirm} from '@inquirer/prompts';
-import {Connection, Client} from '@temporalio/client';
-import {DEV_TEMPORAL_ADDRESS} from '../constants';
-import {exploreSeeds, renderFrames, renderSequences} from '../workflows';
-import {doesDirectoryExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../common/helpers';
 import seedrandom from 'seedrandom';
-import {ScriptConfig} from '../interfaces';
+import {v4 as uuidv4} from 'uuid';
+import {doesDirectoryExist, getDirectoryDateString, isValidURL, makeHashStringUsingPRNG} from '../common/helpers';
+import {DEV_TEMPORAL_ADDRESS} from '../constants';
 import {isValidScriptConfig} from '../event-scripts/validate-config';
+import {ScriptConfig} from '../interfaces';
 import {QueueManager} from '../managers/queue.manager';
+import {exploreFrames, exploreSequences, renderFrames, renderSequences} from '../workflows';
 
 dotenv.config();
 
@@ -63,7 +63,22 @@ async function run() {
         }
 
         if (goal === 'explore') {
-            return 'exploreSeeds';
+            type = await select({
+                message: 'What type of exploration?',
+                choices: [
+                    {
+                        name: 'frame(s)',
+                        value: 'Frames',
+                        description: 'Render single seeded frame(s)',
+                    },
+                    {
+                        name: 'sequence(s)',
+                        value: 'Sequences',
+                        description: 'Render sequence(s) of seeded frame(s)',
+                    },
+                ],
+            });
+            return `explore${type}`;
         }
 
         return;
@@ -157,7 +172,7 @@ async function run() {
     // 24 hours (minus 1 minute) to trigger before "startToCloseTimeout"
     params['timeout'] = 24 * 60 * 60 * 1000 - 1000 * 60;
 
-    if (workflow === 'renderSequences') {
+    if (workflow === 'renderSequences' || workflow == 'exploreSequences') {
         const frameRange = await input({
             message: 'Frame range(s):',
             required: true,
@@ -278,8 +293,8 @@ async function run() {
                 workflowId: `${uuid}-${QueueManager.queue}`,
             });
             break;
-        case 'exploreSeeds':
-            await client.workflow.start(exploreSeeds, {
+        case 'exploreFrames':
+            await client.workflow.start(exploreFrames, {
                 args: [
                     {
                         uuid,
@@ -298,6 +313,30 @@ async function run() {
                 workflowId: `${uuid}-${QueueManager.queue}`,
             });
             break;
+        case 'exploreSequences':
+            await client.workflow.start(exploreSequences, {
+                args: [
+                    {
+                        uuid,
+                        url: params.url,
+                        width: params.width,
+                        height: params.height,
+                        devicePixelRatio: params.devicePixelRatio,
+                        timeout: params.timeout,
+                        count: params.count,
+                        outDir: params.outDir,
+                        sequence: {
+                            fps: params.framerate,
+                            padding: params.padding,
+                            ranges: params.frameRanges,
+                        },
+                        mkDir: params.mkDirName,
+                        scriptConfig: params.scriptConfig,
+                    },
+                ],
+                taskQueue: QueueManager.queue,
+                workflowId: `${uuid}-${QueueManager.queue}`,
+            });
     }
 
     console.log(`\nWorkflow Submitted - ${uuid}\n`);
