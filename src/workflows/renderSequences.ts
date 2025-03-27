@@ -10,11 +10,11 @@ interface Params {
     width: number;
     height: number;
     devicePixelRatio: number;
-    outDir: string;
+    outputRootPath: string;
     timeout: number;
     seeds: Array<string>;
     sequence: Sequence;
-    mkDir?: string;
+    subDirectory?: string;
     scriptConfig?: ScriptConfig;
 }
 
@@ -23,14 +23,14 @@ const {makeFsDirectory} = proxyActivities<typeof activities>({
 });
 
 export async function renderSequences(params: Params): Promise<void> {
-    let outputDirectory = params.outDir;
+    let outputDirectory = params.outputRootPath;
 
-    if (params.mkDir) {
-        const {outDir} = await makeFsDirectory({
-            rootPath: params.outDir,
-            dirName: params.mkDir,
+    if (params.subDirectory) {
+        const {dirPath} = await makeFsDirectory({
+            rootPath: params.outputRootPath,
+            dirName: params.subDirectory,
         });
-        outputDirectory = outDir;
+        outputDirectory = dirPath;
     }
 
     const uniqueFrames: Set<number> = new Set();
@@ -73,7 +73,7 @@ export async function renderSequences(params: Params): Promise<void> {
                                 width: params.width,
                                 height: params.height,
                                 devicePixelRatio: params.devicePixelRatio,
-                                outDir: outputDirectory,
+                                outputDirectory: outputDirectory,
                                 timeout: params.timeout,
                                 segment,
                                 scriptConfig: params.scriptConfig,

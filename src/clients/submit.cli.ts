@@ -101,20 +101,20 @@ async function run() {
         validate: url => isValidURL(url),
     });
 
-    const outEnvDir = process.env.OUT_FOLDER_PATH;
+    const envOutputRootPath = process.env.OUTPUT_ROOT_PATH;
 
-    params['outDir'] = await input({
+    params['outputRootPath'] = await input({
         message: 'Output directory path:',
-        default: isProduction ? (outEnvDir ?? path.dirname(__dirname)) : `${path.join(path.dirname(__dirname), '..', 'out')}`,
+        default: isProduction ? (envOutputRootPath ?? path.dirname(__dirname)) : `${path.join(path.dirname(__dirname), '..', 'out')}`,
         validate: path => doesDirectoryExist(path),
     });
 
-    const useSubDirectory = await confirm({
-        message: 'Put outputs in dated sub-directory?',
+    const useDatedDirectory = await confirm({
+        message: 'Render outputs to dated directory?',
         default: true,
     });
 
-    if (useSubDirectory) {
+    if (useDatedDirectory) {
         let mkDirName = getDirectoryDateString();
 
         const label = await input({
@@ -261,8 +261,8 @@ async function run() {
                         height: params.height,
                         devicePixelRatio: params.devicePixelRatio,
                         timeout: params.timeout,
-                        outDir: params.outDir,
-                        mkDir: params.mkDirName,
+                        outputRootPath: params.outputRootPath,
+                        subDirectory: params.mkDirName,
                         scriptConfig: params.scriptConfig,
                     },
                 ],
@@ -281,13 +281,13 @@ async function run() {
                         height: params.height,
                         devicePixelRatio: params.devicePixelRatio,
                         timeout: params.timeout,
-                        outDir: params.outDir,
+                        outputRootPath: params.outputRootPath,
                         sequence: {
                             fps: params.framerate,
                             padding: params.padding,
                             ranges: params.frameRanges,
                         },
-                        mkDir: params.mkDirName,
+                        subDirectory: params.mkDirName,
                         scriptConfig: params.scriptConfig,
                     },
                 ],
@@ -304,10 +304,10 @@ async function run() {
                         width: params.width,
                         height: params.height,
                         devicePixelRatio: params.devicePixelRatio,
-                        outDir: params.outDir,
+                        outputRootPath: params.outputRootPath,
                         timeout: params.timeout,
                         count: params.count,
-                        mkDir: params.mkDirName,
+                        subDirectory: params.mkDirName,
                         scriptConfig: params.scriptConfig,
                     },
                 ],
@@ -326,13 +326,13 @@ async function run() {
                         devicePixelRatio: params.devicePixelRatio,
                         timeout: params.timeout,
                         count: params.count,
-                        outDir: params.outDir,
+                        outputRootPath: params.outputRootPath,
                         sequence: {
                             fps: params.framerate,
                             padding: params.padding,
                             ranges: params.frameRanges,
                         },
-                        mkDir: params.mkDirName,
+                        subDirectory: params.mkDirName,
                         scriptConfig: params.scriptConfig,
                     },
                 ],

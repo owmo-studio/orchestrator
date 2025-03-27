@@ -1,6 +1,6 @@
 import * as activity from '@temporalio/activity';
-import {logActivity} from '../common/logging';
 import fs from 'fs';
+import {logActivity} from '../common/logging';
 
 interface Params {
     rootPath: string;
@@ -8,7 +8,7 @@ interface Params {
 }
 
 interface Output {
-    outDir: string;
+    dirPath: string;
 }
 
 export async function makeFsDirectory(params: Params): Promise<Output> {
@@ -25,12 +25,12 @@ export async function makeFsDirectory(params: Params): Promise<Output> {
         throw new Error(`makeFsDirectory ERROR - root directory does not exist: "${params.rootPath}"`);
     }
 
-    const outDir = `${params.rootPath}/${params.dirName}`;
+    const dirPath = `${params.rootPath}/${params.dirName}`;
 
-    const output = {outDir};
+    const output = {dirPath};
 
-    if (!fs.existsSync(outDir)) {
-        fs.mkdirSync(outDir);
+    if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath);
         logActivity({
             context,
             type: 'info',
