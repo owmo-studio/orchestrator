@@ -104,18 +104,18 @@ async function run() {
     const envOutputRootPath = process.env.OUTPUT_ROOT_PATH;
 
     params['outputRootPath'] = await input({
-        message: 'Output directory path:',
+        message: 'Output root directory path:',
         default: isProduction ? (envOutputRootPath ?? path.dirname(__dirname)) : `${path.join(path.dirname(__dirname), '..', 'out')}`,
         validate: path => doesDirectoryExist(path),
     });
 
-    const useDatedDirectory = await confirm({
-        message: 'Render outputs to dated directory?',
+    const useSubDirectory = await confirm({
+        message: 'Render outputs to dated sub-directory?',
         default: true,
     });
 
-    if (useDatedDirectory) {
-        let mkDirName = getDirectoryDateString();
+    if (useSubDirectory) {
+        let subDirectory = getDirectoryDateString();
 
         const label = await input({
             message: 'Label for sub-directory (optional):',
@@ -125,12 +125,20 @@ async function run() {
         });
 
         if (label !== '') {
-            mkDirName += `__${label}`;
+            subDirectory += `__${label}`;
         }
 
-        mkDirName += `__${uuid}`;
+        subDirectory += `__${uuid}`;
 
-        params['mkDirName'] = mkDirName;
+        params['subDirectory'] = subDirectory;
+    }
+
+    if (type == 'Sequences') {
+        const useSeedDirectory = await confirm({
+            message: 'Render each seed to its own sub-directory?',
+            default: true,
+        });
+        params['perSeedDirectory'] = useSeedDirectory;
     }
 
     if (goal === 'render') {
@@ -262,7 +270,7 @@ async function run() {
                         devicePixelRatio: params.devicePixelRatio,
                         timeout: params.timeout,
                         outputRootPath: params.outputRootPath,
-                        subDirectory: params.mkDirName,
+                        subDirectory: params.subDirectory,
                         scriptConfig: params.scriptConfig,
                     },
                 ],
@@ -287,7 +295,8 @@ async function run() {
                             padding: params.padding,
                             ranges: params.frameRanges,
                         },
-                        subDirectory: params.mkDirName,
+                        subDirectory: params.subDirectory,
+                        perSeedDirectory: params.perSeedDirectory,
                         scriptConfig: params.scriptConfig,
                     },
                 ],
@@ -307,7 +316,7 @@ async function run() {
                         outputRootPath: params.outputRootPath,
                         timeout: params.timeout,
                         count: params.count,
-                        subDirectory: params.mkDirName,
+                        subDirectory: params.subDirectory,
                         scriptConfig: params.scriptConfig,
                     },
                 ],
@@ -332,7 +341,8 @@ async function run() {
                             padding: params.padding,
                             ranges: params.frameRanges,
                         },
-                        subDirectory: params.mkDirName,
+                        subDirectory: params.subDirectory,
+                        perSeedDirectory: params.perSeedDirectory,
                         scriptConfig: params.scriptConfig,
                     },
                 ],

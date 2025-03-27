@@ -14,6 +14,7 @@ interface Params {
     count: number;
     sequence: Sequence;
     subDirectory?: string;
+    perSeedDirectory: boolean;
     scriptConfig?: ScriptConfig;
 }
 

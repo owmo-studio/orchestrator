@@ -15,6 +15,7 @@ interface Params {
     seeds: Array<string>;
     sequence: Sequence;
     subDirectory?: string;
+    perSeedDirectory: boolean;
     scriptConfig?: ScriptConfig;
 }
 
@@ -61,7 +62,16 @@ export async function renderSequences(params: Params): Promise<void> {
     await Promise.all(
         params.seeds.map(async (seed, seedIndex) => {
             const args = [`${seed}`, `${params.width}`, `${params.height}`, `${params.sequence.padding}`, `${params.sequence.fps}`];
-            await EventScript.Sequence.Pre({...scriptParams, args});
+
+            if (params.perSeedDirectory) {
+                const {dirPath} = await makeFsDirectory({
+                    rootPath: outputDirectory,
+                    dirName: `${seed}`,
+                });
+                outputDirectory = dirPath;
+            }
+
+            await EventScript.Sequence.Pre({...scriptParams, execPath: outputDirectory, args});
             await Promise.all(
                 segmentsToRender.map(segment => {
                     return executeChild('renderSegment', {
@@ -83,7 +93,7 @@ export async function renderSequences(params: Params): Promise<void> {
                     });
                 }),
             );
-            await EventScript.Sequence.Post({...scriptParams, args});
+            await EventScript.Sequence.Post({...scriptParams, execPath: outputDirectory, args});
         }),
     );
 
