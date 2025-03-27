@@ -55,9 +55,9 @@ export async function renderSequences(params: Params): Promise<void> {
         chunk++;
     }
 
-    const scriptParams = {scriptConfig: params.scriptConfig, execPath: outputDirectory};
+    const workParams = {scriptConfig: params.scriptConfig, execPath: outputDirectory};
 
-    await EventScript.Work.Pre(scriptParams);
+    await EventScript.Work.Pre(workParams);
 
     await Promise.all(
         params.seeds.map(async (seed, seedIndex) => {
@@ -101,5 +101,5 @@ export async function renderSequences(params: Params): Promise<void> {
         }),
     );
 
-    await EventScript.Work.Post(scriptParams);
+    await EventScript.Work.Post(workParams);
 }
