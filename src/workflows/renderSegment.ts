@@ -1,7 +1,7 @@
 import {proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
-import {ScriptConfig, Segment} from '../interfaces';
 import {EventScript} from '../event-scripts/run-pre-posts';
+import {ScriptConfig, Segment} from '../interfaces';
 
 interface Params {
     uuid: string;
@@ -9,7 +9,7 @@ interface Params {
     width: number;
     height: number;
     devicePixelRatio: number;
-    outDir: string;
+    outputDirectory: string;
     timeout: number;
     seed: string;
     segment: Segment;
@@ -22,7 +22,7 @@ const {snapshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
 });
 
 export async function renderSegment(params: Params): Promise<void> {
-    const scriptParams = {scriptConfig: params.scriptConfig, execPath: params.outDir};
+    const scriptParams = {scriptConfig: params.scriptConfig, execPath: params.outputDirectory};
 
     await Promise.all(
         params.segment.frames.map(async frame => {
@@ -35,7 +35,7 @@ export async function renderSegment(params: Params): Promise<void> {
                 width: params.width,
                 height: params.height,
                 devicePixelRatio: params.devicePixelRatio,
-                outDir: params.outDir,
+                outputRootPath: params.outputDirectory,
                 timeout: params.timeout,
                 frame: {
                     index: frame,

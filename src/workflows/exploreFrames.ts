@@ -9,10 +9,10 @@ interface Params {
     width: number;
     height: number;
     devicePixelRatio: number;
-    outDir: string;
+    outputRootPath: string;
     timeout: number;
     count: number;
-    mkDir?: string;
+    subDirectory?: string;
     scriptConfig?: ScriptConfig;
 }
 

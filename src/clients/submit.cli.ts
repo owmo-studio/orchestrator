@@ -101,21 +101,21 @@ async function run() {
         validate: url => isValidURL(url),
     });
 
-    const outEnvDir = process.env.OUT_FOLDER_PATH;
+    const envOutputRootPath = process.env.OUTPUT_ROOT_PATH;
 
-    params['outDir'] = await input({
-        message: 'Output directory path:',
-        default: isProduction ? (outEnvDir ?? path.dirname(__dirname)) : `${path.join(path.dirname(__dirname), '..', 'out')}`,
+    params['outputRootPath'] = await input({
+        message: 'Output root directory path:',
+        default: isProduction ? (envOutputRootPath ?? path.dirname(__dirname)) : `${path.join(path.dirname(__dirname), '..', 'out')}`,
         validate: path => doesDirectoryExist(path),
     });
 
     const useSubDirectory = await confirm({
-        message: 'Put outputs in dated sub-directory?',
+        message: 'Render outputs to dated sub-directory?',
         default: true,
     });
 
     if (useSubDirectory) {
-        let mkDirName = getDirectoryDateString();
+        let subDirectory = getDirectoryDateString();
 
         const label = await input({
             message: 'Label for sub-directory (optional):',
@@ -125,12 +125,20 @@ async function run() {
         });
 
         if (label !== '') {
-            mkDirName += `__${label}`;
+            subDirectory += `__${label}`;
         }
 
-        mkDirName += `__${uuid}`;
+        subDirectory += `__${uuid}`;
 
-        params['mkDirName'] = mkDirName;
+        params['subDirectory'] = subDirectory;
+    }
+
+    if (type == 'Sequences') {
+        const useSeedDirectory = await confirm({
+            message: 'Render each seed to its own sub-directory?',
+            default: true,
+        });
+        params['perSeedDirectory'] = useSeedDirectory;
     }
 
     if (goal === 'render') {
@@ -261,8 +269,8 @@ async function run() {
                         height: params.height,
                         devicePixelRatio: params.devicePixelRatio,
                         timeout: params.timeout,
-                        outDir: params.outDir,
-                        mkDir: params.mkDirName,
+                        outputRootPath: params.outputRootPath,
+                        subDirectory: params.subDirectory,
                         scriptConfig: params.scriptConfig,
                     },
                 ],
@@ -281,13 +289,14 @@ async function run() {
                         height: params.height,
                         devicePixelRatio: params.devicePixelRatio,
                         timeout: params.timeout,
-                        outDir: params.outDir,
+                        outputRootPath: params.outputRootPath,
                         sequence: {
                             fps: params.framerate,
                             padding: params.padding,
                             ranges: params.frameRanges,
                         },
-                        mkDir: params.mkDirName,
+                        subDirectory: params.subDirectory,
+                        perSeedDirectory: params.perSeedDirectory,
                         scriptConfig: params.scriptConfig,
                     },
                 ],
@@ -304,10 +313,10 @@ async function run() {
                         width: params.width,
                         height: params.height,
                         devicePixelRatio: params.devicePixelRatio,
-                        outDir: params.outDir,
+                        outputRootPath: params.outputRootPath,
                         timeout: params.timeout,
                         count: params.count,
-                        mkDir: params.mkDirName,
+                        subDirectory: params.subDirectory,
                         scriptConfig: params.scriptConfig,
                     },
                 ],
@@ -326,13 +335,14 @@ async function run() {
                         devicePixelRatio: params.devicePixelRatio,
                         timeout: params.timeout,
                         count: params.count,
-                        outDir: params.outDir,
+                        outputRootPath: params.outputRootPath,
                         sequence: {
                             fps: params.framerate,
                             padding: params.padding,
                             ranges: params.frameRanges,
                         },
-                        mkDir: params.mkDirName,
+                        subDirectory: params.subDirectory,
+                        perSeedDirectory: params.perSeedDirectory,
                         scriptConfig: params.scriptConfig,
                     },
                 ],

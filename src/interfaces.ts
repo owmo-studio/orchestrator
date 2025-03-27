@@ -7,7 +7,7 @@ export interface RenderFrame {
     width: number;
     height: number;
     devicePixelRatio: number;
-    outDir: string;
+    outputRootPath: string;
     timeout: number;
     frame: {
         fps: number;

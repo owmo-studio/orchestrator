@@ -9,10 +9,10 @@ interface Params {
     width: number;
     height: number;
     devicePixelRatio: number;
-    outDir: string;
+    outputRootPath: string;
     timeout: number;
     seeds: Array<string>;
-    mkDir?: string;
+    subDirectory?: string;
     scriptConfig?: ScriptConfig;
 }
 
@@ -26,14 +26,14 @@ const {snapshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
 });
 
 export async function renderFrames(params: Params): Promise<void> {
-    let outputDirectory = params.outDir;
+    let outputDirectory = params.outputRootPath;
 
-    if (params.mkDir) {
-        const {outDir} = await makeFsDirectory({
-            rootPath: params.outDir,
-            dirName: params.mkDir,
+    if (params.subDirectory) {
+        const {dirPath} = await makeFsDirectory({
+            rootPath: params.outputRootPath,
+            dirName: params.subDirectory,
         });
-        outputDirectory = outDir;
+        outputDirectory = dirPath;
     }
 
     const scriptParams = {scriptConfig: params.scriptConfig, execPath: outputDirectory};
@@ -51,7 +51,7 @@ export async function renderFrames(params: Params): Promise<void> {
                 width: params.width,
                 height: params.height,
                 devicePixelRatio: params.devicePixelRatio,
-                outDir: outputDirectory,
+                outputRootPath: outputDirectory,
                 timeout: params.timeout,
                 frame: {
                     fps: 1,

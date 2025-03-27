@@ -62,7 +62,7 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
         return ext;
     };
 
-    const filepath = `${params.outDir}/${params.seed}.${extension('png')}`;
+    const filepath = `${params.outputRootPath}/${params.seed}.${extension('png')}`;
 
     const browser = await BrowserManager.getConnectedBrowser();
 
@@ -70,19 +70,19 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
 
     await client.send('Browser.setDownloadBehavior', {
         behavior: 'allowAndName',
-        downloadPath: params.outDir,
+        downloadPath: params.outputRootPath,
         eventsEnabled: true,
     });
 
     const guids: {[key: string]: string} = {};
     const downloadsInProgress: Array<Promise<string>> = [];
-    const archivePath = `${params.outDir}/${params.seed}.${extension('zip')}`;
+    const archivePath = `${params.outputRootPath}/${params.seed}.${extension('zip')}`;
 
     client.on('Browser.downloadWillBegin', async event => {
         const {suggestedFilename, guid} = event;
         const newFileName = `${params.seed}.${suggestedFilename}`;
-        const oldFilePath = path.resolve(params.outDir, event.guid);
-        const newFilePath = path.resolve(params.outDir, newFileName);
+        const oldFilePath = path.resolve(params.outputRootPath, event.guid);
+        const newFilePath = path.resolve(params.outputRootPath, newFileName);
         guids[guid] = newFileName;
 
         const downloadPromise: Promise<string> = new Promise(resolve => {
@@ -178,7 +178,7 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
 
         if (downloadsInProgress.length > 0) {
             const filePaths: Array<string> = [];
-            for (const key of Object.keys(guids)) filePaths.push(path.resolve(params.outDir, guids[key]));
+            for (const key of Object.keys(guids)) filePaths.push(path.resolve(params.outputRootPath, guids[key]));
             await createZipArchive(filePaths, archivePath);
             await delay(1000);
         }
