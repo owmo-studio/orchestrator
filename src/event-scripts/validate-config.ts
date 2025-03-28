@@ -1,4 +1,6 @@
-export function isValidScriptConfig(config: {[key: string]: any}) {
+export function isValidScriptConfig(config?: {[key: string]: any}) {
+    if (!config) return true;
+
     if (typeof config !== 'object') {
         console.error('Config is not an Object');
         return false;

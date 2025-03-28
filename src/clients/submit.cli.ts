@@ -110,7 +110,7 @@ async function run() {
     });
 
     const useSubDirectory = await confirm({
-        message: 'Render outputs to dated sub-directory?',
+        message: 'Render to dated sub-directory?',
         default: true,
     });
 
@@ -135,7 +135,7 @@ async function run() {
 
     if (type == 'Sequences') {
         const useSeedDirectory = await confirm({
-            message: 'Render each seed to its own sub-directory?',
+            message: 'Render each seed to sub-directory?',
             default: true,
         });
         params['perSeedDirectory'] = useSeedDirectory;
@@ -229,12 +229,8 @@ async function run() {
         });
     }
 
-    const useScriptConfig = await confirm({
-        message: 'Run pre/post event scripts?',
-        default: false,
-    });
-
     function getConfig(configPath: string) {
+        if (configPath == '') return undefined;
         try {
             const data = fs.readFileSync(configPath, 'utf-8');
             return JSON.parse(data) as ScriptConfig;
@@ -243,13 +239,12 @@ async function run() {
         }
     }
 
-    if (useScriptConfig) {
-        const configPath = await input({
-            message: 'Path to JSON config file:',
-            validate: configPath => isValidScriptConfig(getConfig(configPath)),
-        });
-        params['scriptConfig'] = getConfig(configPath);
-    }
+    const configPath = await input({
+        message: 'Pre/Post JSON config (optional):',
+        default: '',
+        validate: configPath => isValidScriptConfig(getConfig(configPath)),
+    });
+    params['scriptConfig'] = getConfig(configPath);
 
     const ok = await confirm({
         message: 'Confirm to submit:',
