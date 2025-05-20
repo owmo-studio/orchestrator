@@ -61,7 +61,7 @@ export async function renderSequences(params: Params): Promise<void> {
 
     await Promise.all(
         params.seeds.map(async (seed, seedIndex) => {
-            const args = [`${seed}`, `${params.width}`, `${params.height}`, `${params.sequence.padding}`, `${params.sequence.fps}`, `${uniqueFrames.size}`];
+            const args = [`${seed}`, `${params.width}`, `${params.height}`, `${params.sequence.padding}`, `${params.sequence.fps}`, `${uniqueFrames.size}`, ''];
 
             let seedOutputDirectory = outputDirectory;
 

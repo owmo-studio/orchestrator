@@ -1,7 +1,7 @@
 import {proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
-import {ScriptConfig} from '../interfaces';
 import {TASK_QUEUE_SCRIPT} from '../constants';
+import {ScriptConfig} from '../interfaces';
 
 const {executeScript} = proxyActivities<typeof activities>({
     startToCloseTimeout: '24 hours',
@@ -32,7 +32,7 @@ async function run({scriptConfig, execPath, args, event, when}: RunParams) {
             label: `EventScript::${event}-${when}`,
             script: scripts[i],
             execPath,
-            args: [...(args ?? []), ...(scripts[i].args ?? [])],
+            args: [event, when, ...(args ?? []), ...(scripts[i].args ?? [])],
         });
     }
 }

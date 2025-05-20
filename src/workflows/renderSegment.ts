@@ -26,8 +26,10 @@ export async function renderSegment(params: Params): Promise<void> {
 
     await Promise.all(
         params.segment.frames.map(async frame => {
-            const args = [`${params.seed}`, `${params.width}`, `${params.height}`, `${params.segment.padding}`, `${params.segment.fps}`, `${frame}`];
+            const args = [`${params.seed}`, `${params.width}`, `${params.height}`, `${params.segment.padding}`, `${params.segment.fps}`, '', `${frame}`];
+
             await EventScript.Frame.Pre({...scriptParams, args});
+
             await snapshotCanvasArchiveDownloads({
                 uuid: params.uuid,
                 seed: params.seed,
@@ -44,6 +46,7 @@ export async function renderSegment(params: Params): Promise<void> {
                     isPadded: true,
                 },
             });
+
             await EventScript.Frame.Post({...scriptParams, args});
         }),
     );
