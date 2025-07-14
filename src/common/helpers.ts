@@ -1,18 +1,38 @@
+import * as Engine from '@owmo/engine';
 import fs from 'fs';
 import JSZip from 'jszip';
 import seedrandom from 'seedrandom';
 
 export function isValidURL(url: string): boolean {
-    const urlRegex = /^(http|https):\/\/[^ "]+$/;
+    const urlRegex = /^(http|https):\/\/[^ ]+$/;
     return urlRegex.test(url);
 }
 
-export function addOrUpdateQueryParams(url: string, paramName: string, paramValue: string): string {
+export function composeEngineConfigURL(url: string, engineConfig: Engine.Configuration): string {
     const urlObj = new URL(url);
-    const params = new URLSearchParams(urlObj.search);
-    params.set(paramName, paramValue);
-    urlObj.search = params.toString();
+    const urlSearchParams = new URLSearchParams(urlObj.search);
+    const config = JSON.stringify(engineConfig);
+
+    let finalConfig = config;
+    const configExtras = urlSearchParams.get('config');
+
+    if (configExtras) {
+        const extrasObj = JSON.parse(decodeURIComponent(configExtras));
+        const configObj = JSON.parse(config);
+
+        if (isPlainObject(extrasObj) && isPlainObject(configObj)) {
+            const merged = {...extrasObj, ...configObj};
+            finalConfig = JSON.stringify(merged);
+        }
+    }
+
+    urlSearchParams.set('config', finalConfig);
+    urlObj.search = urlSearchParams.toString();
     return urlObj.toString();
+}
+
+export function isPlainObject(obj: any): obj is Record<string, any> {
+    return typeof obj === 'object' && obj !== null && !Array.isArray(obj);
 }
 
 export function makeHashStringUsingPRNG(prng: seedrandom.PRNG): string {

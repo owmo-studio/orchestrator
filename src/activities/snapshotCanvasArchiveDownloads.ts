@@ -1,8 +1,7 @@
-import * as Engine from '@owmo/engine';
 import * as activity from '@temporalio/activity';
 import fs from 'fs';
 import path from 'path';
-import {addOrUpdateQueryParams, createZipArchive, delay} from '../common/helpers';
+import {composeEngineConfigURL, createZipArchive, delay} from '../common/helpers';
 import {logActivity} from '../common/logging';
 import {RenderFrame} from '../interfaces';
 import {BrowserManager} from '../managers/browser.manager';
@@ -40,7 +39,7 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
         activity.heartbeat();
     }, 5000);
 
-    const engineConfig: Engine.Configuration = {
+    const URL = composeEngineConfigURL(params.url, {
         seed: params.seed,
         renderMethod: 'offline',
         frame: params.frame.index,
@@ -50,9 +49,7 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
         height: params.height,
         devicePixelRatio: params.devicePixelRatio,
         keepCanvasOnDestroy: true,
-    };
-
-    const URL = addOrUpdateQueryParams(params.url, 'config', JSON.stringify(engineConfig));
+    });
 
     const extension = (ext: string) => {
         if (params.frame.isPadded) {
