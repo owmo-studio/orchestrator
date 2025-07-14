@@ -24,10 +24,10 @@
     "dependencies": {
         "@inquirer/prompts": "^7.0.0",
         "@owmo/engine": "^0.7.3",
-        "@temporalio/activity": "^1.11.3",
-        "@temporalio/client": "^1.11.3",
-        "@temporalio/worker": "^1.11.3",
-        "@temporalio/workflow": "^1.11.3",
+        "@temporalio/activity": "^1.12.1",
+        "@temporalio/client": "^1.12.1",
+        "@temporalio/worker": "^1.12.1",
+        "@temporalio/workflow": "^1.12.1",
         "@types/seedrandom": "^3.0.8",
         "dotenv": "^16.4.5",
         "jszip": "^3.10.1",
@@ -40,7 +40,7 @@
         "uuid": "^10.0.0"
     },
     "devDependencies": {
-        "@temporalio/testing": "^1.11.3",
+        "@temporalio/testing": "^1.12.1",
         "@tsconfig/node18": "^18.2.4",
         "@types/minimist": "^1.2.5",
         "@types/mocha": "10.x",
