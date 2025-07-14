@@ -1,6 +1,6 @@
+import ps from 'ps-node';
 import puppeteer, {Browser} from 'puppeteer';
 import {delay, throwIfUndefined} from '../common/helpers';
-import ps from 'ps-node';
 
 interface ProcessError extends Error {
     code?: string;
@@ -33,7 +33,7 @@ export class BrowserManager {
 
     private static async launchBrowser() {
         this.instance.browser = await puppeteer.launch({
-            headless: 'shell',
+            headless: true,
             args: ['--hide-scrollbars', '--enable-gpu', '--single-process', '--no-zygote', '--no-sandbox'],
             protocolTimeout: 0,
             handleSIGINT: false,
