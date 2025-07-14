@@ -1,10 +1,10 @@
+import {NativeConnection, Worker} from '@temporalio/worker';
 import * as dotenv from 'dotenv';
 import * as activities from '../activities';
-import {Worker, NativeConnection} from '@temporalio/worker';
-import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE_SCRIPT} from '../constants';
 import {delay} from '../common/helpers';
+import {DEV_TEMPORAL_ADDRESS, TASK_QUEUE_SCRIPT} from '../constants';
 
-dotenv.config();
+dotenv.config({quiet: true});
 
 async function run() {
     const connection = await NativeConnection.connect({

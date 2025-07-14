@@ -12,7 +12,7 @@ import {ScriptConfig} from '../interfaces';
 import {QueueManager} from '../managers/queue.manager';
 import {exploreFrames, exploreSequences, renderFrames, renderSequences} from '../workflows';
 
-dotenv.config();
+dotenv.config({quiet: true});
 
 async function run() {
     try {
