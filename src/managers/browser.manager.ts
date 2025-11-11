@@ -14,6 +14,9 @@ export class BrowserManager {
     private browserWSEndpoint!: string;
     private monitoringInterval!: NodeJS.Timeout;
 
+    private static launching = false;
+    private static shuttingDown = false;
+
     private connectCount: number = 0;
     private maxConnects: number = 10;
 
@@ -32,9 +35,14 @@ export class BrowserManager {
     }
 
     private static async launchBrowser() {
+        if (this.launching) {
+            console.warn('Browser launch already in progress — skipping duplicate launch');
+            return;
+        }
+
         this.instance.browser = await puppeteer.launch({
             headless: true,
-            args: ['--hide-scrollbars', '--enable-gpu', '--single-process', '--no-zygote', '--no-sandbox'],
+            args: ['--hide-scrollbars', '--enable-gpu', '--no-zygote', '--no-sandbox'],
             protocolTimeout: 0,
             handleSIGINT: false,
             handleSIGTERM: false,
@@ -52,14 +60,35 @@ export class BrowserManager {
         throwIfUndefined(pid);
         this.instance.pid = pid;
 
+        const proc = this.instance.browser.process();
+        if (proc) {
+            proc.on('exit', async (code, signal) => {
+                if (BrowserManager.shuttingDown) return;
+                console.warn(`Browser process exited unexpectedly (pid=${pid}, code=${code}, signal=${signal}). Relaunching...`);
+                await BrowserManager.launchBrowser();
+            });
+        }
+
+        this.instance.browser.on('disconnected', async () => {
+            if (BrowserManager.shuttingDown) return;
+            console.warn('Browser disconnected unexpectedly. Relaunching...');
+            await BrowserManager.launchBrowser();
+        });
+
         this.startMonitoring();
+
+        this.launching = false;
     }
 
     private static startMonitoring() {
         if (this.instance.monitoringInterval) clearInterval(this.instance.monitoringInterval);
+
         this.instance.monitoringInterval = setInterval(async () => {
-            if (!(await this.isProcessRunning(this.instance.pid))) {
-                console.warn(`Puppeteer process with PID ${this.instance.pid} is not running. Restarting...`);
+            const {pid} = this.instance;
+            const [isAlive, isResponsive] = await Promise.all([this.isProcessRunning(pid), this.isBrowserResponsive()]);
+
+            if (!isAlive || !isResponsive) {
+                console.warn(`Puppeteer process with PID ${pid} not healthy (alive=${isAlive}, responsive=${isResponsive}). Restarting...`);
                 await BrowserManager.launchBrowser();
             }
         }, 5000);
@@ -78,8 +107,19 @@ export class BrowserManager {
         });
     }
 
+    static async isBrowserResponsive(): Promise<boolean> {
+        const browser = this.instance.browser;
+        if (!browser) return false;
+
+        try {
+            await browser.pages();
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     static async getConnectedBrowser() {
-        // Re-launching the browser every N times it's requested
         if (this.#instance.connectCount >= this.#instance.maxConnects) {
             await this.shutdown();
             await this.launchBrowser();
@@ -87,10 +127,16 @@ export class BrowserManager {
         }
 
         this.#instance.connectCount++;
-        return await puppeteer.connect({browserWSEndpoint: this.instance.browserWSEndpoint});
+
+        const connectPromise = puppeteer.connect({browserWSEndpoint: this.instance.browserWSEndpoint});
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Browser connect timeout')), 10000));
+
+        return Promise.race([connectPromise, timeout]) as Promise<Browser>;
     }
 
     static async shutdown() {
+        this.shuttingDown = true;
+
         // Stop monitoring
         if (this.instance.monitoringInterval) {
             clearInterval(this.instance.monitoringInterval);
@@ -139,5 +185,7 @@ export class BrowserManager {
                 }
             }
         }
+
+        this.shuttingDown = false;
     }
 }

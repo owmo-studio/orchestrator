@@ -63,6 +63,13 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
 
     const browser = await BrowserManager.getConnectedBrowser();
 
+    const browserAliveInterval = setInterval(async () => {
+        if (!(await BrowserManager.isBrowserResponsive())) {
+            clearInterval(browserAliveInterval);
+            throw new Error('Browser became unresponsive during render');
+        }
+    }, 1000);
+
     const client = await browser.target().createCDPSession();
 
     await client.send('Browser.setDownloadBehavior', {
@@ -168,10 +175,17 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
             }, params.timeout - 1000);
         });
 
-        await Promise.all(downloadsInProgress).catch(err => {
-            console.log(err);
-            throw err;
-        });
+        await Promise.race([
+            Promise.all(downloadsInProgress),
+            new Promise<never>((_, reject) => {
+                const interval = setInterval(async () => {
+                    if (!(await BrowserManager.isBrowserResponsive())) {
+                        clearInterval(interval);
+                        reject(new Error('Browser died during download'));
+                    }
+                }, 1000);
+            }),
+        ]);
 
         if (downloadsInProgress.length > 0) {
             const filePaths: Array<string> = [];
