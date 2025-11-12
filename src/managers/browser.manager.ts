@@ -6,6 +6,10 @@ interface ProcessError extends Error {
     code?: string;
 }
 
+export interface BrowserManagerInitParams {
+    relaunchThreshold?: number;
+}
+
 export class BrowserManager {
     static #instance: BrowserManager;
 
@@ -17,8 +21,8 @@ export class BrowserManager {
     private static launching = false;
     private static shuttingDown = false;
 
-    private connectCount: number = 0;
-    private maxConnects: number = 10;
+    private connectRequests: number = 0;
+    private relaunchThreshold: number = 10;
 
     private constructor() {}
 
@@ -29,8 +33,12 @@ export class BrowserManager {
         return BrowserManager.#instance;
     }
 
-    static async init() {
+    static async init(params: BrowserManagerInitParams = {}) {
         if (this.instance.browser) return;
+
+        const {relaunchThreshold} = params;
+        if (relaunchThreshold && relaunchThreshold > 0) this.instance.relaunchThreshold = relaunchThreshold;
+
         await this.launchBrowser();
     }
 
@@ -120,13 +128,12 @@ export class BrowserManager {
     }
 
     static async getConnectedBrowser() {
-        if (this.#instance.connectCount >= this.#instance.maxConnects) {
+        if (this.#instance.connectRequests >= this.#instance.relaunchThreshold) {
             await this.shutdown();
             await this.launchBrowser();
-            this.#instance.connectCount = 0;
+            this.#instance.connectRequests = 0;
         }
-
-        this.#instance.connectCount++;
+        this.#instance.connectRequests++;
 
         const connectPromise = puppeteer.connect({browserWSEndpoint: this.instance.browserWSEndpoint});
         const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Browser connect timeout')), 10000));
