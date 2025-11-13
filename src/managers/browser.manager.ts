@@ -118,7 +118,6 @@ export class BrowserManager {
     static async isBrowserResponsive(): Promise<boolean> {
         const browser = this.instance.browser;
         if (!browser) return false;
-
         try {
             await browser.pages();
             return true;

@@ -207,9 +207,10 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
         console.log(err);
         throw err;
     } finally {
+        clearInterval(intervalId);
+        clearInterval(browserAliveInterval);
         await client.detach();
         await browser.disconnect();
-        clearInterval(intervalId);
     }
 
     const endTime: Date = new Date();
