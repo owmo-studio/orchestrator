@@ -1,6 +1,7 @@
 import * as activity from '@temporalio/activity';
 import fs from 'fs';
 import path from 'path';
+import {MAX_RENDER_DURATION_MS} from '../constants';
 import {composeEngineConfigURL, createZipArchive, delay} from '../common/helpers';
 import {logActivity} from '../common/logging';
 import {RenderFrame} from '../interfaces';
@@ -34,6 +35,7 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
     });
 
     const startTime: Date = new Date();
+    const effectiveTimeoutMs = Math.max(1000, Math.min(params.timeout, MAX_RENDER_DURATION_MS));
 
     const intervalId = setInterval(() => {
         activity.heartbeat();
@@ -63,13 +65,6 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
 
     const browser = await BrowserManager.getConnectedBrowser();
 
-    const browserAliveInterval = setInterval(async () => {
-        if (!(await BrowserManager.isBrowserResponsive())) {
-            clearInterval(browserAliveInterval);
-            throw new Error('Browser became unresponsive during render');
-        }
-    }, 1000);
-
     const client = await browser.target().createCDPSession();
 
     await client.send('Browser.setDownloadBehavior', {
@@ -82,17 +77,18 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
     const downloadsInProgress: Array<Promise<string>> = [];
     const archivePath = `${params.outputRootPath}/${params.seed}.${extension('zip')}`;
 
-    client.on('Browser.downloadWillBegin', async event => {
+    const onDownloadWillBegin = (event: {suggestedFilename: string; guid: string}) => {
         const {suggestedFilename, guid} = event;
         const newFileName = `${params.seed}.${suggestedFilename}`;
         const oldFilePath = path.resolve(params.outputRootPath, event.guid);
         const newFilePath = path.resolve(params.outputRootPath, newFileName);
         guids[guid] = newFileName;
 
-        const downloadPromise: Promise<string> = new Promise(resolve => {
-            client.on('Browser.downloadProgress', async event => {
-                if (guid !== event.guid) return;
-                if (event.state === 'completed') {
+        const downloadPromise: Promise<string> = new Promise((resolve, reject) => {
+            const onDownloadProgress = async (downloadEvent: {guid: string; state: string}) => {
+                if (guid !== downloadEvent.guid) return;
+
+                if (downloadEvent.state === 'completed') {
                     try {
                         if (fs.existsSync(newFilePath)) {
                             fs.unlinkSync(newFilePath);
@@ -100,20 +96,25 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
                         fs.renameSync(oldFilePath, newFilePath);
                         resolve(newFilePath);
                     } catch (err) {
-                        console.log(err);
-                        throw err;
+                        reject(err);
+                    } finally {
+                        client.off('Browser.downloadProgress', onDownloadProgress);
                     }
+                } else if (downloadEvent.state === 'canceled') {
+                    client.off('Browser.downloadProgress', onDownloadProgress);
+                    reject(new Error(`Download canceled for guid=${guid}`));
                 }
-            });
-        });
+            };
 
-        downloadPromise.catch(err => {
-            console.log(err);
-            throw err;
+            client.on('Browser.downloadProgress', onDownloadProgress);
         });
 
         downloadsInProgress.push(downloadPromise);
-    });
+    };
+
+    client.on('Browser.downloadWillBegin', onDownloadWillBegin);
+
+    let downloadHealthInterval: NodeJS.Timeout | null = null;
 
     try {
         const page = await browser.newPage();
@@ -164,7 +165,7 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
 
         await page.goto(URL, {timeout: 0, waitUntil: 'load'});
 
-        await new Promise(resolve => {
+        await new Promise<'done' | 'timeout'>(resolve => {
             const interval = setInterval(() => {
                 if (messageReceived) {
                     clearInterval(interval);
@@ -175,16 +176,15 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
             setTimeout(() => {
                 clearInterval(interval);
                 resolve('timeout');
-            }, params.timeout - 1000);
+            }, effectiveTimeoutMs - 1000);
         });
 
         await Promise.race([
             Promise.all(downloadsInProgress),
             new Promise<never>((_, reject) => {
-                const interval = setInterval(async () => {
-                    if (!(await BrowserManager.isBrowserResponsive())) {
-                        clearInterval(interval);
-                        reject(new Error('Browser died during download'));
+                downloadHealthInterval = setInterval(async () => {
+                    if (!(await BrowserManager.isBrowserAlive())) {
+                        reject(new Error('Browser process died during download'));
                     }
                 }, 1000);
             }),
@@ -211,9 +211,15 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
         throw err;
     } finally {
         clearInterval(intervalId);
-        clearInterval(browserAliveInterval);
-        await client.detach();
-        await browser.disconnect();
+        if (downloadHealthInterval) clearInterval(downloadHealthInterval);
+        client.off('Browser.downloadWillBegin', onDownloadWillBegin);
+        try {
+            await client.detach();
+        } catch {}
+        try {
+            await browser.disconnect();
+        } catch {}
+        await BrowserManager.markCaptureEnd();
     }
 
     const endTime: Date = new Date();

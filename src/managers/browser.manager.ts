@@ -1,5 +1,8 @@
+import {execFile} from 'child_process';
 import ps from 'ps-node';
 import puppeteer, {Browser} from 'puppeteer';
+import {promisify} from 'util';
+import {MAX_BROWSER_RSS_GROWTH_FACTOR, MAX_BROWSER_RSS_GROWTH_MB, MAX_BROWSER_RSS_MB} from '../constants';
 import {delay, throwIfUndefined} from '../common/helpers';
 
 interface ProcessError extends Error {
@@ -8,6 +11,7 @@ interface ProcessError extends Error {
 
 export interface BrowserManagerInitParams {
     relaunchThreshold?: number;
+    maxBrowserRssMb?: number;
 }
 
 export class BrowserManager {
@@ -18,11 +22,16 @@ export class BrowserManager {
     private browserWSEndpoint!: string;
     private monitoringInterval!: NodeJS.Timeout;
 
-    private static launching = false;
     private static shuttingDown = false;
+    private static launchPromise: Promise<void> | null = null;
+    private static readonly execFileAsync = promisify(execFile);
 
     private connectRequests: number = 0;
     private relaunchThreshold: number = 10;
+    private activeCaptures: number = 0;
+    private restartPending: boolean = false;
+    private maxBrowserRssMb: number = MAX_BROWSER_RSS_MB;
+    private minObservedBrowserRssMb: number = Infinity;
 
     private constructor() {}
 
@@ -34,58 +43,66 @@ export class BrowserManager {
     }
 
     static async init(params: BrowserManagerInitParams = {}) {
-        if (this.instance.browser) return;
+        if (this.instance.browser && (await this.isBrowserResponsive())) return;
 
-        const {relaunchThreshold} = params;
+        const {relaunchThreshold, maxBrowserRssMb} = params;
         if (relaunchThreshold && relaunchThreshold > 0) this.instance.relaunchThreshold = relaunchThreshold;
+        if (maxBrowserRssMb && maxBrowserRssMb > 0) this.instance.maxBrowserRssMb = maxBrowserRssMb;
 
         await this.launchBrowser();
     }
 
     private static async launchBrowser() {
-        if (this.launching) {
-            console.warn('Browser launch already in progress — skipping duplicate launch');
+        if (this.launchPromise) {
+            await this.launchPromise;
             return;
         }
 
-        this.instance.browser = await puppeteer.launch({
-            headless: true,
-            args: ['--hide-scrollbars', '--enable-gpu', '--no-zygote', '--no-sandbox'],
-            protocolTimeout: 0,
-            handleSIGINT: false,
-            handleSIGTERM: false,
-            handleSIGHUP: false,
-            acceptInsecureCerts: true,
-        });
-
-        this.instance.browserWSEndpoint = this.instance.browser.wsEndpoint();
-
-        while (!this.instance.browser.process()) {
-            await delay(1000);
-        }
-
-        const {pid} = this.instance.browser.process() ?? {pid: undefined};
-        throwIfUndefined(pid);
-        this.instance.pid = pid;
-
-        const proc = this.instance.browser.process();
-        if (proc) {
-            proc.on('exit', async (code, signal) => {
-                if (BrowserManager.shuttingDown) return;
-                console.warn(`Browser process exited unexpectedly (pid=${pid}, code=${code}, signal=${signal}). Relaunching...`);
-                await BrowserManager.launchBrowser();
+        this.launchPromise = (async () => {
+            this.instance.browser = await puppeteer.launch({
+                headless: true,
+                args: ['--hide-scrollbars', '--enable-gpu', '--no-zygote', '--no-sandbox'],
+                protocolTimeout: 0,
+                handleSIGINT: false,
+                handleSIGTERM: false,
+                handleSIGHUP: false,
+                acceptInsecureCerts: true,
             });
+
+            this.instance.browserWSEndpoint = this.instance.browser.wsEndpoint();
+
+            while (!this.instance.browser.process()) {
+                await delay(1000);
+            }
+
+            const {pid} = this.instance.browser.process() ?? {pid: undefined};
+            throwIfUndefined(pid);
+            this.instance.pid = pid;
+            this.instance.minObservedBrowserRssMb = Infinity;
+
+            const proc = this.instance.browser.process();
+            if (proc) {
+                proc.on('exit', async (code, signal) => {
+                    if (BrowserManager.shuttingDown) return;
+                    console.warn(`Browser process exited unexpectedly (pid=${pid}, code=${code}, signal=${signal}). Relaunching...`);
+                    await BrowserManager.restartBrowser('process-exit', true);
+                });
+            }
+
+            this.instance.browser.on('disconnected', async () => {
+                if (BrowserManager.shuttingDown) return;
+                console.warn('Browser disconnected unexpectedly. Relaunching...');
+                await BrowserManager.restartBrowser('browser-disconnected', true);
+            });
+
+            this.startMonitoring();
+        })();
+
+        try {
+            await this.launchPromise;
+        } finally {
+            this.launchPromise = null;
         }
-
-        this.instance.browser.on('disconnected', async () => {
-            if (BrowserManager.shuttingDown) return;
-            console.warn('Browser disconnected unexpectedly. Relaunching...');
-            await BrowserManager.launchBrowser();
-        });
-
-        this.startMonitoring();
-
-        this.launching = false;
     }
 
     private static startMonitoring() {
@@ -93,11 +110,16 @@ export class BrowserManager {
 
         this.instance.monitoringInterval = setInterval(async () => {
             const {pid} = this.instance;
-            const [isAlive, isResponsive] = await Promise.all([this.isProcessRunning(pid), this.isBrowserResponsive()]);
+            const isAlive = await this.isProcessRunning(pid);
 
-            if (!isAlive || !isResponsive) {
-                console.warn(`Puppeteer process with PID ${pid} not healthy (alive=${isAlive}, responsive=${isResponsive}). Restarting...`);
-                await BrowserManager.launchBrowser();
+            if (!isAlive) {
+                console.warn(`Puppeteer process with PID ${pid} is not alive. Relaunching...`);
+                await BrowserManager.restartBrowser('monitor-process-dead', true);
+                return;
+            }
+
+            if (this.instance.restartPending && this.instance.activeCaptures === 0) {
+                await BrowserManager.restartBrowser('pending-restart');
             }
         }, 5000);
     }
@@ -115,6 +137,73 @@ export class BrowserManager {
         });
     }
 
+    private static async getProcessRssMb(pid: number): Promise<number | null> {
+        if (!pid) return null;
+        if (process.platform === 'win32') return null;
+        try {
+            const {stdout} = await this.execFileAsync('ps', ['-o', 'rss=', '-p', `${pid}`]);
+            const rssKb = parseInt(stdout.trim(), 10);
+            if (!Number.isFinite(rssKb) || rssKb <= 0) return null;
+            return rssKb / 1024;
+        } catch {
+            return null;
+        }
+    }
+
+    private static async shouldRestartBetweenCaptures(): Promise<{restart: boolean; reason?: string}> {
+        const rssMb = await this.getProcessRssMb(this.instance.pid);
+        if (rssMb !== null) {
+            this.instance.minObservedBrowserRssMb = Math.min(this.instance.minObservedBrowserRssMb, rssMb);
+
+            if (rssMb >= this.instance.maxBrowserRssMb) {
+                return {restart: true, reason: `rss ${Math.round(rssMb)}MB exceeds cap ${this.instance.maxBrowserRssMb}MB`};
+            }
+
+            if (this.instance.minObservedBrowserRssMb < Infinity) {
+                const baseline = this.instance.minObservedBrowserRssMb;
+                const growthMb = rssMb - baseline;
+                if (rssMb >= baseline * MAX_BROWSER_RSS_GROWTH_FACTOR && growthMb >= MAX_BROWSER_RSS_GROWTH_MB) {
+                    return {restart: true, reason: `rss growth ${Math.round(growthMb)}MB from baseline ${Math.round(baseline)}MB`};
+                }
+            }
+        }
+
+        if (this.instance.connectRequests >= this.instance.relaunchThreshold) {
+            return {restart: true, reason: `connect requests reached threshold ${this.instance.relaunchThreshold}`};
+        }
+
+        return {restart: false};
+    }
+
+    private static async restartBrowser(reason: string, force: boolean = false) {
+        if (!force && this.instance.activeCaptures > 0) {
+            this.instance.restartPending = true;
+            console.warn(`Browser restart deferred (${reason}); ${this.instance.activeCaptures} capture(s) in progress`);
+            return;
+        }
+
+        this.instance.restartPending = false;
+        await this.shutdown();
+        await this.launchBrowser();
+        this.instance.connectRequests = 0;
+        console.warn(`Browser restarted (${reason})`);
+    }
+
+    static async markCaptureStart() {
+        this.instance.activeCaptures++;
+    }
+
+    static async markCaptureEnd() {
+        this.instance.activeCaptures = Math.max(0, this.instance.activeCaptures - 1);
+        if (this.instance.activeCaptures === 0 && this.instance.restartPending) {
+            await this.restartBrowser('deferred-restart');
+        }
+    }
+
+    static async isBrowserAlive(): Promise<boolean> {
+        return this.isProcessRunning(this.instance.pid);
+    }
+
     static async isBrowserResponsive(): Promise<boolean> {
         const browser = this.instance.browser;
         if (!browser) return false;
@@ -127,17 +216,26 @@ export class BrowserManager {
     }
 
     static async getConnectedBrowser() {
-        if (this.#instance.connectRequests >= this.#instance.relaunchThreshold) {
-            await this.shutdown();
+        if (!this.instance.browserWSEndpoint || !this.instance.browser || !(await this.isBrowserResponsive())) {
             await this.launchBrowser();
-            this.#instance.connectRequests = 0;
         }
-        this.#instance.connectRequests++;
 
-        const connectPromise = puppeteer.connect({browserWSEndpoint: this.instance.browserWSEndpoint});
-        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Browser connect timeout')), 10000));
-
-        return Promise.race([connectPromise, timeout]) as Promise<Browser>;
+        if (this.instance.activeCaptures === 0) {
+            const decision = await this.shouldRestartBetweenCaptures();
+            if (decision.restart) {
+                await this.restartBrowser(decision.reason ?? 'between-captures');
+            }
+        }
+        this.instance.connectRequests++;
+        await this.markCaptureStart();
+        try {
+            const connectPromise = puppeteer.connect({browserWSEndpoint: this.instance.browserWSEndpoint});
+            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Browser connect timeout')), 10000));
+            return (await Promise.race([connectPromise, timeout])) as Browser;
+        } catch (err) {
+            await this.markCaptureEnd();
+            throw err;
+        }
     }
 
     static async shutdown() {
