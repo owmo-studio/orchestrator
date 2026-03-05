@@ -200,6 +200,10 @@ export class BrowserManager {
         }
     }
 
+    static async forceRestart(reason: string = 'forced-restart') {
+        await this.restartBrowser(reason, true);
+    }
+
     static async isBrowserAlive(): Promise<boolean> {
         return this.isProcessRunning(this.instance.pid);
     }

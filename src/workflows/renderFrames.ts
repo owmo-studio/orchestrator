@@ -25,7 +25,7 @@ const {makeFsDirectory} = proxyActivities<typeof activities>({
 
 const {snapshotCanvasArchiveDownloads} = proxyActivities<typeof activities>({
     startToCloseTimeout: '24 hours',
-    heartbeatTimeout: '5 minutes',
+    heartbeatTimeout: '30 seconds',
 });
 
 export async function renderFrames(params: Params): Promise<void> {

@@ -23,6 +23,8 @@ async function run() {
         taskQueue: QueueManager.queue,
         workflowsPath: require.resolve('../workflows'),
         maxConcurrentActivityTaskExecutions: 1,
+        maxHeartbeatThrottleInterval: '5s',
+        defaultHeartbeatThrottleInterval: '2s',
     });
 
     const params: BrowserManagerInitParams = {};
