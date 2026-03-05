@@ -103,16 +103,7 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
     const filepath = `${params.outputRootPath}/${params.seed}.${extension('png')}`;
 
     const browser = await withCancellation(BrowserManager.getConnectedBrowser());
-
-    const client = await withCancellation(browser.target().createCDPSession());
-
-    await withCancellation(
-        client.send('Browser.setDownloadBehavior', {
-            behavior: 'allowAndName',
-            downloadPath: params.outputRootPath,
-            eventsEnabled: true,
-        }),
-    );
+    let client: any;
 
     const guids: {[key: string]: string} = {};
     const downloadsInProgress: Array<Promise<string>> = [];
@@ -153,11 +144,21 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
         downloadsInProgress.push(downloadPromise);
     };
 
-    client.on('Browser.downloadWillBegin', onDownloadWillBegin);
-
     let downloadHealthInterval: NodeJS.Timeout | null = null;
 
     try {
+        client = await withCancellation(browser.target().createCDPSession());
+
+        await withCancellation(
+            client.send('Browser.setDownloadBehavior', {
+                behavior: 'allowAndName',
+                downloadPath: params.outputRootPath,
+                eventsEnabled: true,
+            }),
+        );
+
+        client.on('Browser.downloadWillBegin', onDownloadWillBegin);
+
         const page = await withCancellation(browser.newPage());
 
         let messageReceived = false;
@@ -292,10 +293,12 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
     } finally {
         clearInterval(intervalId);
         if (downloadHealthInterval) clearInterval(downloadHealthInterval);
-        client.off('Browser.downloadWillBegin', onDownloadWillBegin);
-        try {
-            await client.detach();
-        } catch {}
+        if (client) {
+            client.off('Browser.downloadWillBegin', onDownloadWillBegin);
+            try {
+                await client.detach();
+            } catch {}
+        }
         try {
             await browser.disconnect();
         } catch {}
