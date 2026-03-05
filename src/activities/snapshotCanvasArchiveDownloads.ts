@@ -131,13 +131,16 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
         });
 
         page.on('pageerror', error => {
+            const message = error instanceof Error ? error.message : String(error);
+            const data = error instanceof Error ? {name: error.name, message: error.message, stack: error.stack} : {error};
+
             logActivity({
                 context,
                 type: 'error',
                 label: 'snapshotCanvasArchiveDownloads',
                 status: 'ERROR',
-                message: `${error.message}`,
-                data: error,
+                message,
+                data,
             });
         });
 
