@@ -1,6 +1,6 @@
-import {executeChild, proxyActivities} from '@temporalio/workflow';
+import {continueAsNew, executeChild, proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
-import {MAX_CHILD_FRAMES} from '../constants';
+import {MAX_CHILD_FRAMES, MAX_SEQUENCE_SEEDS_PER_RUN, MAX_WORKFLOW_COMMAND_BATCH} from '../constants';
 import {EventScript} from '../event-scripts/run-pre-posts';
 import {ScriptConfig, Segment, Sequence} from '../interfaces';
 
@@ -17,6 +17,9 @@ interface Params {
     subDirectory?: string;
     perSeedDirectory: boolean;
     scriptConfig?: ScriptConfig;
+    skipWorkPre?: boolean;
+    outputDirectory?: string;
+    seedStartIndex?: number;
 }
 
 const {makeFsDirectory} = proxyActivities<typeof activities>({
@@ -24,9 +27,9 @@ const {makeFsDirectory} = proxyActivities<typeof activities>({
 });
 
 export async function renderSequences(params: Params): Promise<void> {
-    let outputDirectory = params.outputRootPath;
+    let outputDirectory = params.outputDirectory ?? params.outputRootPath;
 
-    if (params.subDirectory) {
+    if (!params.outputDirectory && params.subDirectory) {
         const {dirPath} = await makeFsDirectory({
             rootPath: params.outputRootPath,
             dirName: params.subDirectory,
@@ -57,26 +60,35 @@ export async function renderSequences(params: Params): Promise<void> {
 
     const workParams = {scriptConfig: params.scriptConfig, execPath: outputDirectory};
 
-    await EventScript.Work.Pre(workParams);
+    if (!params.skipWorkPre) {
+        await EventScript.Work.Pre(workParams);
+    }
 
-    await Promise.all(
-        params.seeds.map(async (seed, seedIndex) => {
-            const args = [`${seed}`, `${params.width}`, `${params.height}`, `${params.sequence.padding}`, `${params.sequence.fps}`, `${uniqueFrames.size}`, ''];
+    const seedStartIndex = params.seedStartIndex ?? 0;
+    const seedsForThisRun = params.seeds.slice(0, MAX_SEQUENCE_SEEDS_PER_RUN);
+    const remainingSeeds = params.seeds.slice(MAX_SEQUENCE_SEEDS_PER_RUN);
 
-            let seedOutputDirectory = outputDirectory;
+    for (let seedIndex = 0; seedIndex < seedsForThisRun.length; seedIndex++) {
+        const seed = seedsForThisRun[seedIndex];
+        const globalSeedIndex = seedStartIndex + seedIndex;
+        const args = [`${seed}`, `${params.width}`, `${params.height}`, `${params.sequence.padding}`, `${params.sequence.fps}`, `${uniqueFrames.size}`, ''];
 
-            if (params.perSeedDirectory) {
-                const {dirPath} = await makeFsDirectory({
-                    rootPath: outputDirectory,
-                    dirName: `${seed}`,
-                });
-                seedOutputDirectory = dirPath;
-            }
+        let seedOutputDirectory = outputDirectory;
 
-            await EventScript.Sequence.Pre({scriptConfig: params.scriptConfig, execPath: seedOutputDirectory, args});
+        if (params.perSeedDirectory) {
+            const {dirPath} = await makeFsDirectory({
+                rootPath: outputDirectory,
+                dirName: `${seed}`,
+            });
+            seedOutputDirectory = dirPath;
+        }
 
+        await EventScript.Sequence.Pre({scriptConfig: params.scriptConfig, execPath: seedOutputDirectory, args});
+
+        for (let i = 0; i < segmentsToRender.length; i += MAX_WORKFLOW_COMMAND_BATCH) {
+            const segmentBatch = segmentsToRender.slice(i, i + MAX_WORKFLOW_COMMAND_BATCH);
             await Promise.all(
-                segmentsToRender.map(segment => {
+                segmentBatch.map(segment => {
                     return executeChild('renderSegment', {
                         args: [
                             {
@@ -92,14 +104,24 @@ export async function renderSequences(params: Params): Promise<void> {
                                 scriptConfig: params.scriptConfig,
                             },
                         ],
-                        workflowId: `${params.uuid}_s[${seedIndex}]_c[${segment.chunk}]`,
+                        workflowId: `${params.uuid}_s[${globalSeedIndex}]_c[${segment.chunk}]`,
                     });
                 }),
             );
+        }
 
-            await EventScript.Sequence.Post({scriptConfig: params.scriptConfig, execPath: seedOutputDirectory, args});
-        }),
-    );
+        await EventScript.Sequence.Post({scriptConfig: params.scriptConfig, execPath: seedOutputDirectory, args});
+    }
+
+    if (remainingSeeds.length > 0) {
+        await continueAsNew<typeof renderSequences>({
+            ...params,
+            seeds: remainingSeeds,
+            skipWorkPre: true,
+            outputDirectory,
+            seedStartIndex: seedStartIndex + seedsForThisRun.length,
+        });
+    }
 
     await EventScript.Work.Post(workParams);
 }
