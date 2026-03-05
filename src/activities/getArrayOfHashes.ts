@@ -6,6 +6,7 @@ import {logActivity} from '../common/logging';
 interface Params {
     uuid: string;
     count: number;
+    offset?: number;
 }
 
 interface Output {
@@ -23,8 +24,15 @@ export async function getArrayOfHashes(params: Params): Promise<Output> {
         data: params,
     });
 
+    const offset = params.offset ?? 0;
     const prng = seedrandom(params.uuid);
     const output: Output = {hashes: []};
+
+    // Advance the deterministic PRNG to the requested starting position.
+    for (let i = 0; i < offset; i++) {
+        makeHashStringUsingPRNG(prng);
+    }
+
     for (let i = 0; i < params.count; i++) {
         output.hashes.push(makeHashStringUsingPRNG(prng));
     }
@@ -34,7 +42,7 @@ export async function getArrayOfHashes(params: Params): Promise<Output> {
         type: 'info',
         label: 'getArrayOfHashes',
         status: 'COMPLETED',
-        data: output,
+        data: {count: output.hashes.length, offset},
     });
 
     return output;
