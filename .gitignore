@@ -16,7 +16,8 @@ vendor/
 bin/
 dist/
 node_modules/
-.vscode/
+.vscode/*
+!.vscode/settings.json
 public/
 lib
 .pytest_cache
