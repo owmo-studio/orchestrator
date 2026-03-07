@@ -50,6 +50,7 @@ function shouldRestartBrowserAfterError(err: unknown): boolean {
     if (/ProtocolError/i.test(name) && /timed out/i.test(message)) return true;
     if (/Page\.navigate timed out/i.test(message)) return true;
     if (/Browser connect timeout/i.test(message)) return true;
+    if (/exceeded render timeout/i.test(message)) return true;
     if (/Target closed/i.test(message)) return true;
     if (/Session closed/i.test(message)) return true;
     if (/Connection closed/i.test(message)) return true;
@@ -89,7 +90,16 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
     });
 
     const startTime: Date = new Date();
+    const startTimeMs = startTime.getTime();
     const effectiveTimeoutMs = Math.max(1000, Math.min(params.timeout, MAX_RENDER_DURATION_MS));
+    const remainingTimeMs = () => Math.max(1, effectiveTimeoutMs - (Date.now() - startTimeMs));
+    const withStageDeadline = <T>(promise: Promise<T>, label: string) =>
+        Promise.race([
+            promise,
+            delay(remainingTimeMs()).then(() => {
+                throw new Error(`${label} exceeded render timeout of ${effectiveTimeoutMs}ms`);
+            }),
+        ]) as Promise<T>;
 
     const intervalId = setInterval(() => {
         try {
@@ -164,34 +174,43 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
     let downloadHealthInterval: NodeJS.Timeout | null = null;
 
     try {
-        client = await withCancellation(browser.target().createCDPSession());
+        client = await withCancellation(withStageDeadline(browser.target().createCDPSession(), 'createCDPSession'));
 
         await withCancellation(
-            client.send('Browser.setDownloadBehavior', {
-                behavior: 'allowAndName',
-                downloadPath: params.outputRootPath,
-                eventsEnabled: true,
-            }),
+            withStageDeadline(
+                client.send('Browser.setDownloadBehavior', {
+                    behavior: 'allowAndName',
+                    downloadPath: params.outputRootPath,
+                    eventsEnabled: true,
+                }),
+                'setDownloadBehavior',
+            ),
         );
 
         client.on('Browser.downloadWillBegin', onDownloadWillBegin);
 
-        const page = await withCancellation(browser.newPage());
+        const page = await withCancellation(withStageDeadline(browser.newPage(), 'newPage'));
 
         let messageReceived = false;
 
         await withCancellation(
-            page.exposeFunction('onMessageReceivedEvent', (e: MessageEvent) => {
-                if (e.isTrusted) messageReceived = true;
-            }),
+            withStageDeadline(
+                page.exposeFunction('onMessageReceivedEvent', (e: MessageEvent) => {
+                    if (e.isTrusted) messageReceived = true;
+                }),
+                'exposeFunction',
+            ),
         );
 
         await withCancellation(
-            page.evaluateOnNewDocument(() => {
-                window.addEventListener('message', (e: MessageEvent) => {
-                    window.onMessageReceivedEvent(e);
-                });
-            }),
+            withStageDeadline(
+                page.evaluateOnNewDocument(() => {
+                    window.addEventListener('message', (e: MessageEvent) => {
+                        window.onMessageReceivedEvent(e);
+                    });
+                }),
+                'evaluateOnNewDocument',
+            ),
         );
 
         page.on('pageerror', error => {
@@ -218,65 +237,77 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
             });
         });
 
-        await withCancellation(page.setCacheEnabled(false));
+        await withCancellation(withStageDeadline(page.setCacheEnabled(false), 'setCacheEnabled'));
 
         await withCancellation(
-            page.setViewport({
-                width: params.width,
-                height: params.height,
-                deviceScaleFactor: 1,
-            }),
-        );
-
-        await withCancellation(page.goto(URL, {timeout: 0, waitUntil: 'load'}));
-
-        await withCancellation(
-            new Promise<'done' | 'timeout'>(resolve => {
-                const interval = setInterval(() => {
-                    if (messageReceived) {
-                        clearInterval(interval);
-                        const waitToResolve = downloadsInProgress.length > 0 ? 1000 : 0;
-                        setTimeout(() => resolve('done'), waitToResolve);
-                    }
-                }, 100);
-                setTimeout(() => {
-                    clearInterval(interval);
-                    resolve('timeout');
-                }, effectiveTimeoutMs - 1000);
-            }),
-        );
-
-        await withCancellation(
-            Promise.race([
-                Promise.all(downloadsInProgress),
-                new Promise<never>((_, reject) => {
-                    downloadHealthInterval = setInterval(async () => {
-                        if (!(await BrowserManager.isBrowserAlive())) {
-                            reject(new Error('Browser process died during download'));
-                        }
-                    }, 1000);
+            withStageDeadline(
+                page.setViewport({
+                    width: params.width,
+                    height: params.height,
+                    deviceScaleFactor: 1,
                 }),
-            ]),
+                'setViewport',
+            ),
+        );
+
+        await withCancellation(withStageDeadline(page.goto(URL, {timeout: 0, waitUntil: 'domcontentloaded'}), 'goto'));
+
+        await withCancellation(
+            withStageDeadline(
+                new Promise<'done' | 'timeout'>(resolve => {
+                    const interval = setInterval(() => {
+                        if (messageReceived) {
+                            clearInterval(interval);
+                            const waitToResolve = downloadsInProgress.length > 0 ? 1000 : 0;
+                            setTimeout(() => resolve('done'), waitToResolve);
+                        }
+                    }, 100);
+                    setTimeout(() => {
+                        clearInterval(interval);
+                        resolve('timeout');
+                    }, remainingTimeMs());
+                }),
+                'render-complete wait',
+            ),
+        );
+
+        await withCancellation(
+            withStageDeadline(
+                Promise.race([
+                    Promise.all(downloadsInProgress),
+                    new Promise<never>((_, reject) => {
+                        downloadHealthInterval = setInterval(async () => {
+                            if (!(await BrowserManager.isBrowserAlive())) {
+                                reject(new Error('Browser process died during download'));
+                            }
+                        }, 1000);
+                    }),
+                ]),
+                'download wait',
+            ),
         );
 
         if (downloadsInProgress.length > 0) {
             const filePaths: Array<string> = [];
             for (const key of Object.keys(guids)) filePaths.push(path.resolve(params.outputRootPath, guids[key]));
-            await withCancellation(createZipArchive(filePaths, archivePath));
+            await withCancellation(withStageDeadline(createZipArchive(filePaths, archivePath), 'createZipArchive'));
             await withCancellation(delay(1000));
         }
 
         const canvasData = await withCancellation(
-            page.evaluate(() => {
-                const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-                return canvas.toDataURL('image/png');
-            }),
+            withStageDeadline(
+                page.evaluate(() => {
+                    const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+                    return canvas.toDataURL('image/png');
+                }),
+                'capture canvas',
+            ),
         );
 
         const canvasDataBuffer = Buffer.from(canvasData.split(',')[1], 'base64');
         fs.writeFileSync(filepath, canvasDataBuffer);
 
-        await withCancellation(page.close());
+        await withCancellation(withStageDeadline(page.close(), 'page.close'));
     } catch (err) {
         const isCancelled = isCancellationError(err);
         const isExpectedTeardown = isExpectedCancellationTeardownError(err);
