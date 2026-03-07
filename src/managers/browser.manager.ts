@@ -233,7 +233,10 @@ export class BrowserManager {
         this.instance.connectRequests++;
         await this.markCaptureStart();
         try {
-            const connectPromise = puppeteer.connect({browserWSEndpoint: this.instance.browserWSEndpoint});
+            const connectPromise = puppeteer.connect({
+                browserWSEndpoint: this.instance.browserWSEndpoint,
+                protocolTimeout: 0,
+            });
             const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Browser connect timeout')), 10000));
             return (await Promise.race([connectPromise, timeout])) as Browser;
         } catch (err) {

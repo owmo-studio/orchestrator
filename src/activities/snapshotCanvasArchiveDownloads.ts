@@ -41,6 +41,23 @@ function isExpectedCancellationTeardownError(err: unknown): boolean {
     return false;
 }
 
+function shouldRestartBrowserAfterError(err: unknown): boolean {
+    if (!(err instanceof Error)) return false;
+
+    const message = err.message ?? '';
+    const name = err.name ?? '';
+
+    if (/ProtocolError/i.test(name) && /timed out/i.test(message)) return true;
+    if (/Page\.navigate timed out/i.test(message)) return true;
+    if (/Browser connect timeout/i.test(message)) return true;
+    if (/Target closed/i.test(message)) return true;
+    if (/Session closed/i.test(message)) return true;
+    if (/Connection closed/i.test(message)) return true;
+    if (/Connection terminated/i.test(message)) return true;
+
+    return false;
+}
+
 export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promise<Output> {
     const context = activity.Context.current();
     let cancellationRequested = false;
@@ -264,6 +281,7 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
         const isCancelled = isCancellationError(err);
         const isExpectedTeardown = isExpectedCancellationTeardownError(err);
         const terminated = cancellationRequested || isCancelled;
+        const shouldRestartBrowser = !terminated && shouldRestartBrowserAfterError(err);
 
         if (terminated || isExpectedTeardown) {
             logActivity({
@@ -279,6 +297,30 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
                 throw new CancelledFailure('Activity cancelled by workflow termination', [], err instanceof Error ? err : undefined);
             }
         } else {
+            if (shouldRestartBrowser) {
+                logActivity({
+                    context,
+                    type: 'warn',
+                    label: 'snapshotCanvasArchiveDownloads',
+                    status: 'BROWSER_RESTART',
+                    message: 'Restarting browser after recoverable browser/protocol failure.',
+                    data: err instanceof Error ? {name: err.name, message: err.message} : {error: err},
+                });
+
+                try {
+                    await BrowserManager.forceRestart('recoverable-browser-error');
+                } catch (restartErr) {
+                    logActivity({
+                        context,
+                        type: 'warn',
+                        label: 'snapshotCanvasArchiveDownloads',
+                        status: 'BROWSER_RESTART_FAILED',
+                        message: restartErr instanceof Error ? restartErr.message : String(restartErr),
+                        data: restartErr instanceof Error ? {name: restartErr.name, message: restartErr.message, stack: restartErr.stack} : {error: restartErr},
+                    });
+                }
+            }
+
             logActivity({
                 context,
                 type: 'error',
