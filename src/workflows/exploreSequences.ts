@@ -1,8 +1,7 @@
-import {proxyActivities} from '@temporalio/workflow';
+import {executeChild, proxyActivities} from '@temporalio/workflow';
 import * as activities from '../activities';
 import {MAX_CONTINUATION_CHUNK_SIZE} from '../constants';
 import {ScriptConfig, Sequence} from '../interfaces';
-import {renderSequences} from './renderSequences';
 
 interface Params {
     uuid: string;
@@ -36,8 +35,13 @@ export async function exploreSequences(params: Params): Promise<void> {
         hashes.push(...chunk);
     }
 
-    await renderSequences({
-        ...params,
-        seeds: hashes,
+    await executeChild('renderSequences', {
+        args: [
+            {
+                ...params,
+                seeds: hashes,
+            },
+        ],
+        workflowId: `${params.uuid}_renderSequences`,
     });
 }

@@ -24,6 +24,7 @@ export class BrowserManager {
 
     private static shuttingDown = false;
     private static launchPromise: Promise<void> | null = null;
+    private static restartPromise: Promise<void> | null = null;
     private static readonly execFileAsync = promisify(execFile);
 
     private connectRequests: number = 0;
@@ -84,6 +85,7 @@ export class BrowserManager {
             if (proc) {
                 proc.on('exit', async (code, signal) => {
                     if (BrowserManager.shuttingDown) return;
+                    if (BrowserManager.instance.pid !== pid) return;
                     console.warn(`Browser process exited unexpectedly (pid=${pid}, code=${code}, signal=${signal}). Relaunching...`);
                     await BrowserManager.restartBrowser('process-exit', true);
                 });
@@ -91,6 +93,7 @@ export class BrowserManager {
 
             this.instance.browser.on('disconnected', async () => {
                 if (BrowserManager.shuttingDown) return;
+                if (!BrowserManager.instance.browser || BrowserManager.instance.pid !== pid) return;
                 console.warn('Browser disconnected unexpectedly. Relaunching...');
                 await BrowserManager.restartBrowser('browser-disconnected', true);
             });
@@ -182,11 +185,24 @@ export class BrowserManager {
             return;
         }
 
-        this.instance.restartPending = false;
-        await this.shutdown();
-        await this.launchBrowser();
-        this.instance.connectRequests = 0;
-        console.warn(`Browser restarted (${reason})`);
+        if (this.restartPromise) {
+            await this.restartPromise;
+            return;
+        }
+
+        this.restartPromise = (async () => {
+            this.instance.restartPending = false;
+            await this.shutdown();
+            await this.launchBrowser();
+            this.instance.connectRequests = 0;
+            console.warn(`Browser restarted (${reason})`);
+        })();
+
+        try {
+            await this.restartPromise;
+        } finally {
+            this.restartPromise = null;
+        }
     }
 
     static async markCaptureStart() {
@@ -265,23 +281,32 @@ export class BrowserManager {
                 }
             } finally {
                 this.instance.browser = null;
+                this.instance.browserWSEndpoint = '';
             }
         }
 
         // Kill the browser process if it hasn't already exited
         if (this.instance.pid) {
+            const pid = this.instance.pid;
             try {
-                process.kill(this.instance.pid, 'SIGTERM');
+                process.kill(pid, 'SIGTERM');
                 await new Promise<void>((resolve, reject) => {
+                    const timeoutId = setTimeout(() => {
+                        clearInterval(checkIfExited);
+                        reject(new Error(`Timed out waiting for browser process ${pid} to exit after SIGTERM`));
+                    }, 5000);
                     const checkIfExited = setInterval(() => {
                         try {
-                            process.kill(this.instance.pid, 0);
+                            process.kill(pid, 0);
                         } catch (err: unknown) {
                             const processError = err as ProcessError;
                             if (processError.code === 'ESRCH') {
+                                clearTimeout(timeoutId);
                                 clearInterval(checkIfExited);
                                 resolve();
                             } else {
+                                clearTimeout(timeoutId);
+                                clearInterval(checkIfExited);
                                 reject(err);
                             }
                         }
@@ -292,8 +317,18 @@ export class BrowserManager {
                 if (processError.code === 'ESRCH') {
                     console.warn('Process already exited');
                 } else {
-                    console.error('Error killing process:', error);
+                    console.warn(`Graceful browser shutdown failed for pid=${pid}; sending SIGKILL`);
+                    try {
+                        process.kill(pid, 'SIGKILL');
+                    } catch (killError: unknown) {
+                        const killProcessError = killError as ProcessError;
+                        if (killProcessError.code !== 'ESRCH') {
+                            console.error('Error force killing browser:', killError);
+                        }
+                    }
                 }
+            } finally {
+                this.instance.pid = 0;
             }
         }
 
