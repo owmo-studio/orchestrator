@@ -12,7 +12,9 @@ interface Params {
     devicePixelRatio: number;
     outputRootPath: string;
     timeout: number;
-    seeds: Array<string>;
+    seeds?: Array<string>;
+    seedCount?: number;
+    seedOffset?: number;
     sequence: Sequence;
     subDirectory?: string;
     perSeedDirectory: boolean;
@@ -23,6 +25,10 @@ interface Params {
 }
 
 const {makeFsDirectory} = proxyActivities<typeof activities>({
+    startToCloseTimeout: '1 minute',
+});
+
+const {getArrayOfHashes} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
 });
 
@@ -64,9 +70,28 @@ export async function renderSequences(params: Params): Promise<void> {
         await EventScript.Work.Pre(workParams);
     }
 
-    const seedStartIndex = params.seedStartIndex ?? 0;
-    const seedsForThisRun = params.seeds.slice(0, MAX_SEQUENCE_SEEDS_PER_RUN);
-    const remainingSeeds = params.seeds.slice(MAX_SEQUENCE_SEEDS_PER_RUN);
+    const isExploration = typeof params.seedCount === 'number';
+    const seedOffset = params.seedOffset ?? 0;
+    const seedStartIndex = params.seedStartIndex ?? seedOffset;
+
+    let seedsForThisRun: Array<string>;
+    let remainingSeeds: Array<string> | undefined;
+    let remainingSeedCount = 0;
+
+    if (isExploration) {
+        const count = Math.min(MAX_SEQUENCE_SEEDS_PER_RUN, params.seedCount ?? 0);
+        const {hashes} = await getArrayOfHashes({
+            uuid: params.uuid,
+            count,
+            offset: seedOffset,
+        });
+        seedsForThisRun = hashes;
+        remainingSeedCount = Math.max(0, (params.seedCount ?? 0) - count);
+    } else {
+        const allSeeds = params.seeds ?? [];
+        seedsForThisRun = allSeeds.slice(0, MAX_SEQUENCE_SEEDS_PER_RUN);
+        remainingSeeds = allSeeds.slice(MAX_SEQUENCE_SEEDS_PER_RUN);
+    }
 
     for (let seedIndex = 0; seedIndex < seedsForThisRun.length; seedIndex++) {
         const seed = seedsForThisRun[seedIndex];
@@ -113,7 +138,17 @@ export async function renderSequences(params: Params): Promise<void> {
         await EventScript.Sequence.Post({scriptConfig: params.scriptConfig, execPath: seedOutputDirectory, args});
     }
 
-    if (remainingSeeds.length > 0) {
+    if (isExploration && remainingSeedCount > 0) {
+        await continueAsNew<typeof renderSequences>({
+            ...params,
+            seeds: undefined,
+            seedCount: remainingSeedCount,
+            seedOffset: seedOffset + seedsForThisRun.length,
+            skipWorkPre: true,
+            outputDirectory,
+            seedStartIndex: seedStartIndex + seedsForThisRun.length,
+        });
+    } else if (!isExploration && (remainingSeeds?.length ?? 0) > 0) {
         await continueAsNew<typeof renderSequences>({
             ...params,
             seeds: remainingSeeds,

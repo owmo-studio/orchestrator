@@ -7,6 +7,36 @@ import {spawn} from 'child_process';
 
 export async function executeScript(params: ScriptExec): Promise<void> {
     const context = activity.Context.current();
+    let cancellationRequested = false;
+    let childProcess: ReturnType<typeof spawn> | null = null;
+
+    const terminateChild = (signal: NodeJS.Signals) => {
+        if (!childProcess || childProcess.exitCode !== null || childProcess.killed) return;
+        try {
+            childProcess.kill(signal);
+        } catch {}
+    };
+
+    const cancellationGuard = context.cancelled.catch(async err => {
+        cancellationRequested = true;
+        logActivity({
+            context,
+            type: 'warn',
+            label: 'executeScript',
+            status: 'TERMINATION_DETECTED',
+            message: 'Temporal cancelled script activity. Stopping child process.',
+            data: {
+                workflowId: context.info.workflowExecution.workflowId,
+                runId: context.info.workflowExecution.runId,
+                activityId: context.info.activityId,
+                label: params.label,
+            },
+        });
+        terminateChild('SIGTERM');
+        setTimeout(() => terminateChild('SIGKILL'), 5000);
+        throw err;
+    });
+    const withCancellation = <T>(promise: Promise<T>) => Promise.race([promise, cancellationGuard]) as Promise<T>;
 
     logActivity({
         context,
@@ -38,44 +68,49 @@ export async function executeScript(params: ScriptExec): Promise<void> {
     }
 
     try {
-        await new Promise<void>((resolve, reject) => {
-            const process = spawn('bash', [params.script.path, params.execPath, ...(params.args ?? [])], {stdio: ['inherit', 'pipe', 'pipe']});
+        await withCancellation(
+            new Promise<void>((resolve, reject) => {
+                childProcess = spawn('bash', [params.script.path, params.execPath, ...(params.args ?? [])], {stdio: ['inherit', 'pipe', 'pipe']});
 
-            const checkProcessStatus = () => {
-                if (process.exitCode === null) {
-                    activity.heartbeat();
-                }
-            };
+                const checkProcessStatus = () => {
+                    if (childProcess?.exitCode === null) {
+                        activity.heartbeat();
+                    }
+                };
 
-            const intervalId = setInterval(checkProcessStatus, 5000);
+                const intervalId = setInterval(checkProcessStatus, 5000);
 
-            process.stdout.on('data', data => {
-                logActivity({
-                    context,
-                    type: 'info',
-                    label: 'executeScript',
-                    status: 'CONSOLE',
-                    message: data.toString(),
+                childProcess.stdout?.on('data', data => {
+                    logActivity({
+                        context,
+                        type: 'info',
+                        label: 'executeScript',
+                        status: 'CONSOLE',
+                        message: data.toString(),
+                    });
                 });
-            });
 
-            let errorOutput: string = '';
-            process.stderr.on('data', data => {
-                errorOutput += data.toString();
-            });
+                let errorOutput: string = '';
+                childProcess.stderr?.on('data', data => {
+                    errorOutput += data.toString();
+                });
 
-            process.on('close', code => {
-                clearInterval(intervalId);
-                if (code === 0) {
-                    resolve();
-                } else {
-                    reject(new Error(`Script exited with code ${code}. Error output: ${errorOutput}`));
-                }
-            });
-        });
+                childProcess.on('close', code => {
+                    clearInterval(intervalId);
+                    if (cancellationRequested) {
+                        reject(new Error('Script terminated due to activity cancellation'));
+                    } else if (code === 0) {
+                        resolve();
+                    } else {
+                        reject(new Error(`Script exited with code ${code}. Error output: ${errorOutput}`));
+                    }
+                });
+            }),
+        );
     } catch (err) {
-        console.log(err);
         throw err;
+    } finally {
+        terminateChild('SIGTERM');
     }
 
     logActivity({

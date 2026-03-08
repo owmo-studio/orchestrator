@@ -12,7 +12,9 @@ interface Params {
     devicePixelRatio: number;
     outputRootPath: string;
     timeout: number;
-    seeds: Array<string>;
+    seeds?: Array<string>;
+    seedCount?: number;
+    seedOffset?: number;
     subDirectory?: string;
     scriptConfig?: ScriptConfig;
     skipWorkPre?: boolean;
@@ -20,6 +22,10 @@ interface Params {
 }
 
 const {makeFsDirectory} = proxyActivities<typeof activities>({
+    startToCloseTimeout: '1 minute',
+});
+
+const {getArrayOfHashes} = proxyActivities<typeof activities>({
     startToCloseTimeout: '1 minute',
 });
 
@@ -45,8 +51,27 @@ export async function renderFrames(params: Params): Promise<void> {
         await EventScript.Work.Pre(scriptParams);
     }
 
-    const seedsForThisRun = params.seeds.slice(0, MAX_CONTINUATION_CHUNK_SIZE);
-    const remainingSeeds = params.seeds.slice(MAX_CONTINUATION_CHUNK_SIZE);
+    const isExploration = typeof params.seedCount === 'number';
+    const seedOffset = params.seedOffset ?? 0;
+
+    let seedsForThisRun: Array<string>;
+    let remainingSeeds: Array<string> | undefined;
+    let remainingSeedCount = 0;
+
+    if (isExploration) {
+        const count = Math.min(MAX_CONTINUATION_CHUNK_SIZE, params.seedCount ?? 0);
+        const {hashes} = await getArrayOfHashes({
+            uuid: params.uuid,
+            count,
+            offset: seedOffset,
+        });
+        seedsForThisRun = hashes;
+        remainingSeedCount = Math.max(0, (params.seedCount ?? 0) - count);
+    } else {
+        const allSeeds = params.seeds ?? [];
+        seedsForThisRun = allSeeds.slice(0, MAX_CONTINUATION_CHUNK_SIZE);
+        remainingSeeds = allSeeds.slice(MAX_CONTINUATION_CHUNK_SIZE);
+    }
 
     for (let i = 0; i < seedsForThisRun.length; i += MAX_WORKFLOW_COMMAND_BATCH) {
         const batch = seedsForThisRun.slice(i, i + MAX_WORKFLOW_COMMAND_BATCH);
@@ -79,7 +104,16 @@ export async function renderFrames(params: Params): Promise<void> {
         );
     }
 
-    if (remainingSeeds.length > 0) {
+    if (isExploration && remainingSeedCount > 0) {
+        await continueAsNew<typeof renderFrames>({
+            ...params,
+            seeds: undefined,
+            seedCount: remainingSeedCount,
+            seedOffset: seedOffset + seedsForThisRun.length,
+            skipWorkPre: true,
+            outputDirectory,
+        });
+    } else if (!isExploration && (remainingSeeds?.length ?? 0) > 0) {
         await continueAsNew<typeof renderFrames>({
             ...params,
             seeds: remainingSeeds,
