@@ -1,6 +1,7 @@
 import fs from 'fs';
 import * as path from 'path';
 import * as activity from '@temporalio/activity';
+import {assertDirectoryWritable} from '../common/helpers';
 import {logActivity} from '../common/logging';
 import {ScriptExec} from '../interfaces';
 import {spawn} from 'child_process';
@@ -66,6 +67,8 @@ export async function executeScript(params: ScriptExec): Promise<void> {
     } else if (!path.isAbsolute(params.execPath)) {
         throw new Error(`ExecPath is not absolute: ${params.execPath}`);
     }
+
+    assertDirectoryWritable(params.execPath);
 
     try {
         await withCancellation(

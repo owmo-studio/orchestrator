@@ -3,7 +3,7 @@ import {CancelledFailure} from '@temporalio/activity';
 import fs from 'fs';
 import path from 'path';
 import {MAX_RENDER_DURATION_MS} from '../constants';
-import {composeEngineConfigURL, createZipArchive, delay} from '../common/helpers';
+import {assertDirectoryWritable, composeEngineConfigURL, createZipArchive, delay} from '../common/helpers';
 import {logActivity} from '../common/logging';
 import {RenderFrame} from '../interfaces';
 import {BrowserManager} from '../managers/browser.manager';
@@ -47,6 +47,7 @@ function shouldRestartBrowserAfterError(err: unknown): boolean {
     const message = err.message ?? '';
     const name = err.name ?? '';
 
+    if (/Output path unavailable/i.test(message)) return false;
     if (/ProtocolError/i.test(name) && /timed out/i.test(message)) return true;
     if (/ProtocolError/i.test(name)) return true;
     if (/Page\.navigate timed out/i.test(message)) return true;
@@ -181,6 +182,8 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
     try {
         client = await withCancellation(withStageDeadline(browser.target().createCDPSession(), 'createCDPSession'));
 
+        assertDirectoryWritable(params.outputRootPath);
+
         await withCancellation(
             withStageDeadline(
                 client.send('Browser.setDownloadBehavior', {
@@ -293,6 +296,7 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
         );
 
         if (downloadsInProgress.length > 0) {
+            assertDirectoryWritable(params.outputRootPath);
             const filePaths: Array<string> = [];
             for (const key of Object.keys(guids)) filePaths.push(path.resolve(params.outputRootPath, guids[key]));
             await withCancellation(withStageDeadline(createZipArchive(filePaths, archivePath), 'createZipArchive'));
@@ -309,6 +313,7 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
             ),
         );
 
+        assertDirectoryWritable(params.outputRootPath);
         const canvasDataBuffer = Buffer.from(canvasData.split(',')[1], 'base64');
         fs.writeFileSync(filepath, canvasDataBuffer);
 

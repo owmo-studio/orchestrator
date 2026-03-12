@@ -1,6 +1,7 @@
 import * as Engine from '@owmo/engine';
 import fs from 'fs';
 import JSZip from 'jszip';
+import path from 'path';
 import seedrandom from 'seedrandom';
 
 export function isValidURL(url: string): boolean {
@@ -71,6 +72,34 @@ export async function createZipArchive(filePaths: Array<string>, zipFilePath: st
     const content = await zip.generateAsync({type: 'nodebuffer'});
 
     fs.writeFileSync(zipFilePath, content);
+}
+
+export function assertDirectoryWritable(dirPath: string): void {
+    if (!fs.existsSync(dirPath)) {
+        throw new Error(`Output path unavailable: ${dirPath} does not exist`);
+    }
+
+    const stats = fs.statSync(dirPath);
+    if (!stats.isDirectory()) {
+        throw new Error(`Output path unavailable: ${dirPath} is not a directory`);
+    }
+
+    const probePath = path.join(
+        dirPath,
+        `.orchestrator-write-test-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.tmp`,
+    );
+
+    try {
+        fs.writeFileSync(probePath, 'ok');
+        fs.unlinkSync(probePath);
+    } catch (err) {
+        try {
+            if (fs.existsSync(probePath)) fs.unlinkSync(probePath);
+        } catch {}
+
+        const reason = err instanceof Error ? err.message : String(err);
+        throw new Error(`Output path unavailable: ${dirPath} is not writable (${reason})`);
+    }
 }
 
 export function delay(time: number) {

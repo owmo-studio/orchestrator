@@ -1,5 +1,6 @@
 import * as activity from '@temporalio/activity';
 import fs from 'fs';
+import {assertDirectoryWritable} from '../common/helpers';
 import {logActivity} from '../common/logging';
 
 interface Params {
@@ -24,6 +25,8 @@ export async function makeFsDirectory(params: Params): Promise<Output> {
     if (!fs.existsSync(params.rootPath)) {
         throw new Error(`makeFsDirectory ERROR - root directory does not exist: "${params.rootPath}"`);
     }
+
+    assertDirectoryWritable(params.rootPath);
 
     const dirPath = `${params.rootPath}/${params.dirName}`;
 
