@@ -48,11 +48,16 @@ function shouldRestartBrowserAfterError(err: unknown): boolean {
     const name = err.name ?? '';
 
     if (/ProtocolError/i.test(name) && /timed out/i.test(message)) return true;
+    if (/ProtocolError/i.test(name)) return true;
     if (/Page\.navigate timed out/i.test(message)) return true;
     if (/Browser connect timeout/i.test(message)) return true;
     if (/exceeded render timeout/i.test(message)) return true;
+    if (/Target crashed/i.test(message)) return true;
     if (/Target closed/i.test(message)) return true;
+    if (/Page crashed/i.test(message)) return true;
+    if (/Browser closed/i.test(message)) return true;
     if (/Session closed/i.test(message)) return true;
+    if (/Cannot find context with specified id/i.test(message)) return true;
     if (/Connection closed/i.test(message)) return true;
     if (/Connection terminated/i.test(message)) return true;
 
@@ -76,7 +81,7 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
                 activityId: context.info.activityId,
             },
         });
-        await BrowserManager.forceRestart('activity-cancelled');
+        await BrowserManager.requestRestart('activity-cancelled');
         throw err;
     });
     const withCancellation = <T>(promise: Promise<T>) => Promise.race([promise, cancellationGuard]) as Promise<T>;
@@ -339,7 +344,7 @@ export async function snapshotCanvasArchiveDownloads(params: RenderFrame): Promi
                 });
 
                 try {
-                    await BrowserManager.forceRestart('recoverable-browser-error');
+                    await BrowserManager.requestRestart('recoverable-browser-error');
                 } catch (restartErr) {
                     logActivity({
                         context,

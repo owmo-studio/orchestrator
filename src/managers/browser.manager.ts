@@ -28,9 +28,10 @@ export class BrowserManager {
     private static readonly execFileAsync = promisify(execFile);
 
     private connectRequests: number = 0;
-    private relaunchThreshold: number = 10;
+    private relaunchThreshold: number = Infinity;
     private activeCaptures: number = 0;
     private restartPending: boolean = false;
+    private pendingRestartReason: string | null = null;
     private maxBrowserRssMb: number = MAX_BROWSER_RSS_MB;
     private minObservedBrowserRssMb: number = Infinity;
 
@@ -122,7 +123,7 @@ export class BrowserManager {
             }
 
             if (this.instance.restartPending && this.instance.activeCaptures === 0) {
-                await BrowserManager.restartBrowser('pending-restart');
+                await BrowserManager.restartBrowser(this.instance.pendingRestartReason ?? 'pending-restart');
             }
         }, 5000);
     }
@@ -153,6 +154,15 @@ export class BrowserManager {
         }
     }
 
+    private static async waitForProcessExit(pid: number, timeoutMs: number): Promise<void> {
+        const start = Date.now();
+        while (Date.now() - start < timeoutMs) {
+            if (!(await this.isProcessRunning(pid))) return;
+            await delay(100);
+        }
+        throw new Error(`Timed out waiting for browser process ${pid} to exit`);
+    }
+
     private static async shouldRestartBetweenCaptures(): Promise<{restart: boolean; reason?: string}> {
         const rssMb = await this.getProcessRssMb(this.instance.pid);
         if (rssMb !== null) {
@@ -181,6 +191,7 @@ export class BrowserManager {
     private static async restartBrowser(reason: string, force: boolean = false) {
         if (!force && this.instance.activeCaptures > 0) {
             this.instance.restartPending = true;
+            this.instance.pendingRestartReason = reason;
             console.warn(`Browser restart deferred (${reason}); ${this.instance.activeCaptures} capture(s) in progress`);
             return;
         }
@@ -192,6 +203,7 @@ export class BrowserManager {
 
         this.restartPromise = (async () => {
             this.instance.restartPending = false;
+            this.instance.pendingRestartReason = null;
             await this.shutdown();
             await this.launchBrowser();
             this.instance.connectRequests = 0;
@@ -212,8 +224,12 @@ export class BrowserManager {
     static async markCaptureEnd() {
         this.instance.activeCaptures = Math.max(0, this.instance.activeCaptures - 1);
         if (this.instance.activeCaptures === 0 && this.instance.restartPending) {
-            await this.restartBrowser('deferred-restart');
+            await this.restartBrowser(this.instance.pendingRestartReason ?? 'deferred-restart');
         }
+    }
+
+    static async requestRestart(reason: string) {
+        await this.restartBrowser(reason, false);
     }
 
     static async forceRestart(reason: string = 'forced-restart') {
@@ -236,6 +252,14 @@ export class BrowserManager {
     }
 
     static async getConnectedBrowser() {
+        if (this.restartPromise) {
+            await this.restartPromise;
+        }
+
+        if (this.instance.restartPending && this.instance.activeCaptures === 0) {
+            await this.restartBrowser(this.instance.pendingRestartReason ?? 'pending-restart');
+        }
+
         if (!this.instance.browserWSEndpoint || !this.instance.browser || !(await this.isBrowserResponsive())) {
             await this.launchBrowser();
         }
@@ -290,28 +314,7 @@ export class BrowserManager {
             const pid = this.instance.pid;
             try {
                 process.kill(pid, 'SIGTERM');
-                await new Promise<void>((resolve, reject) => {
-                    const timeoutId = setTimeout(() => {
-                        clearInterval(checkIfExited);
-                        reject(new Error(`Timed out waiting for browser process ${pid} to exit after SIGTERM`));
-                    }, 5000);
-                    const checkIfExited = setInterval(() => {
-                        try {
-                            process.kill(pid, 0);
-                        } catch (err: unknown) {
-                            const processError = err as ProcessError;
-                            if (processError.code === 'ESRCH') {
-                                clearTimeout(timeoutId);
-                                clearInterval(checkIfExited);
-                                resolve();
-                            } else {
-                                clearTimeout(timeoutId);
-                                clearInterval(checkIfExited);
-                                reject(err);
-                            }
-                        }
-                    }, 100);
-                });
+                await this.waitForProcessExit(pid, 5000);
             } catch (error: unknown) {
                 const processError = error as ProcessError;
                 if (processError.code === 'ESRCH') {
@@ -320,6 +323,7 @@ export class BrowserManager {
                     console.warn(`Graceful browser shutdown failed for pid=${pid}; sending SIGKILL`);
                     try {
                         process.kill(pid, 'SIGKILL');
+                        await this.waitForProcessExit(pid, 5000);
                     } catch (killError: unknown) {
                         const killProcessError = killError as ProcessError;
                         if (killProcessError.code !== 'ESRCH') {
