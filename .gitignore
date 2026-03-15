@@ -29,3 +29,4 @@ workflow-bundle.js
 .DS_Store
 /out/*
 !/out/.gitkeep
+/logs/

@@ -4,6 +4,7 @@ import puppeteer, {Browser} from 'puppeteer';
 import {promisify} from 'util';
 import {MAX_BROWSER_RSS_GROWTH_FACTOR, MAX_BROWSER_RSS_GROWTH_MB, MAX_BROWSER_RSS_MB} from '../constants';
 import {delay, throwIfUndefined} from '../common/helpers';
+import {logProcessEvent} from '../common/logging';
 
 interface ProcessError extends Error {
     code?: string;
@@ -51,6 +52,11 @@ export class BrowserManager {
         if (relaunchThreshold && relaunchThreshold > 0) this.instance.relaunchThreshold = relaunchThreshold;
         if (maxBrowserRssMb && maxBrowserRssMb > 0) this.instance.maxBrowserRssMb = maxBrowserRssMb;
 
+        logProcessEvent({
+            event: 'browser_manager.init',
+            data: {relaunchThreshold: this.instance.relaunchThreshold, maxBrowserRssMb: this.instance.maxBrowserRssMb},
+        });
+
         await this.launchBrowser();
     }
 
@@ -61,6 +67,7 @@ export class BrowserManager {
         }
 
         this.launchPromise = (async () => {
+            logProcessEvent({event: 'browser.launch.started'});
             this.instance.browser = await puppeteer.launch({
                 headless: true,
                 args: ['--hide-scrollbars', '--enable-gpu', '--no-zygote', '--no-sandbox'],
@@ -81,6 +88,7 @@ export class BrowserManager {
             throwIfUndefined(pid);
             this.instance.pid = pid;
             this.instance.minObservedBrowserRssMb = Infinity;
+            logProcessEvent({event: 'browser.launch.completed', data: {browserPid: pid}});
 
             const proc = this.instance.browser.process();
             if (proc) {
@@ -88,6 +96,7 @@ export class BrowserManager {
                     if (BrowserManager.shuttingDown) return;
                     if (BrowserManager.instance.pid !== pid) return;
                     console.warn(`Browser process exited unexpectedly (pid=${pid}, code=${code}, signal=${signal}). Relaunching...`);
+                    logProcessEvent({event: 'browser.process_exit', data: {browserPid: pid, code, signal}});
                     await BrowserManager.restartBrowser('process-exit', true);
                 });
             }
@@ -96,6 +105,7 @@ export class BrowserManager {
                 if (BrowserManager.shuttingDown) return;
                 if (!BrowserManager.instance.browser || BrowserManager.instance.pid !== pid) return;
                 console.warn('Browser disconnected unexpectedly. Relaunching...');
+                logProcessEvent({event: 'browser.disconnected', data: {browserPid: pid}});
                 await BrowserManager.restartBrowser('browser-disconnected', true);
             });
 
@@ -118,6 +128,7 @@ export class BrowserManager {
 
             if (!isAlive) {
                 console.warn(`Puppeteer process with PID ${pid} is not alive. Relaunching...`);
+                logProcessEvent({event: 'browser.monitor_dead', data: {browserPid: pid}});
                 await BrowserManager.restartBrowser('monitor-process-dead', true);
                 return;
             }
@@ -193,6 +204,10 @@ export class BrowserManager {
             this.instance.restartPending = true;
             this.instance.pendingRestartReason = reason;
             console.warn(`Browser restart deferred (${reason}); ${this.instance.activeCaptures} capture(s) in progress`);
+            logProcessEvent({
+                event: 'browser.restart.deferred',
+                data: {reason, activeCaptures: this.instance.activeCaptures, browserPid: this.instance.pid},
+            });
             return;
         }
 
@@ -202,12 +217,20 @@ export class BrowserManager {
         }
 
         this.restartPromise = (async () => {
+            logProcessEvent({
+                event: 'browser.restart.started',
+                data: {reason, force, browserPid: this.instance.pid, activeCaptures: this.instance.activeCaptures},
+            });
             this.instance.restartPending = false;
             this.instance.pendingRestartReason = null;
             await this.shutdown();
             await this.launchBrowser();
             this.instance.connectRequests = 0;
             console.warn(`Browser restarted (${reason})`);
+            logProcessEvent({
+                event: 'browser.restart.completed',
+                data: {reason, force, browserPid: this.instance.pid},
+            });
         })();
 
         try {
@@ -229,10 +252,18 @@ export class BrowserManager {
     }
 
     static async requestRestart(reason: string) {
+        logProcessEvent({
+            event: 'browser.restart.requested',
+            data: {reason, browserPid: this.instance.pid, activeCaptures: this.instance.activeCaptures},
+        });
         await this.restartBrowser(reason, false);
     }
 
     static async forceRestart(reason: string = 'forced-restart') {
+        logProcessEvent({
+            event: 'browser.restart.forced',
+            data: {reason, browserPid: this.instance.pid, activeCaptures: this.instance.activeCaptures},
+        });
         await this.restartBrowser(reason, true);
     }
 
@@ -287,6 +318,7 @@ export class BrowserManager {
 
     static async shutdown() {
         this.shuttingDown = true;
+        logProcessEvent({event: 'browser.shutdown.started', data: {browserPid: this.instance.pid}});
 
         // Stop monitoring
         if (this.instance.monitoringInterval) {
@@ -300,8 +332,10 @@ export class BrowserManager {
             } catch (err: unknown) {
                 if (err instanceof Error && (err.message.includes('Target closed') || err.message.includes('Navigating frame was detached'))) {
                     console.warn('Browser was already closed:', err.message);
+                    logProcessEvent({event: 'browser.shutdown.already_closed', data: {browserPid: this.instance.pid, message: err.message}});
                 } else {
                     console.error('Error closing browser:', err);
+                    logProcessEvent({event: 'browser.shutdown.close_error', data: {browserPid: this.instance.pid, error: err instanceof Error ? err.message : String(err)}});
                 }
             } finally {
                 this.instance.browser = null;
@@ -314,13 +348,19 @@ export class BrowserManager {
             const pid = this.instance.pid;
             try {
                 process.kill(pid, 'SIGTERM');
+                logProcessEvent({event: 'browser.shutdown.sigterm', data: {browserPid: pid}});
                 await this.waitForProcessExit(pid, 5000);
             } catch (error: unknown) {
                 const processError = error as ProcessError;
                 if (processError.code === 'ESRCH') {
                     console.warn('Process already exited');
+                    logProcessEvent({event: 'browser.shutdown.already_exited', data: {browserPid: pid}});
                 } else {
                     console.warn(`Graceful browser shutdown failed for pid=${pid}; sending SIGKILL`);
+                    logProcessEvent({
+                        event: 'browser.shutdown.sigkill',
+                        data: {browserPid: pid, error: error instanceof Error ? error.message : String(error)},
+                    });
                     try {
                         process.kill(pid, 'SIGKILL');
                         await this.waitForProcessExit(pid, 5000);
@@ -328,6 +368,10 @@ export class BrowserManager {
                         const killProcessError = killError as ProcessError;
                         if (killProcessError.code !== 'ESRCH') {
                             console.error('Error force killing browser:', killError);
+                            logProcessEvent({
+                                event: 'browser.shutdown.sigkill_error',
+                                data: {browserPid: pid, error: killError instanceof Error ? killError.message : String(killError)},
+                            });
                         }
                     }
                 }
@@ -337,5 +381,6 @@ export class BrowserManager {
         }
 
         this.shuttingDown = false;
+        logProcessEvent({event: 'browser.shutdown.completed'});
     }
 }
